@@ -1,22 +1,23 @@
 require('dotenv').config({ path: './madu-backend/.env' });
 
+const { Pool } = require('pg');
 
-const { Sequelize } = require('sequelize');
-
-console.log('DB_NAME:', process.env.DB_NAME);
-console.log('DB_USER:', process.env.DB_USER);
-console.log('DB_PASS:', process.env.DB_PASS);  // Verifique se a senha está correta
-console.log('DB_HOST:', process.env.DB_HOST);
-
-
-const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASS, {
-  host: process.env.DB_HOST,
-  dialect: 'postgres',
-  port: process.env.DB_PORT || 5432,
+// Configuração do pool de conexões com o PostgreSQL
+const pool = new Pool({
+  user: process.env.DB_USER,       // Usuário do banco de dados
+  host: process.env.DB_HOST,       // Endereço do banco de dados (localhost ou outro)
+  database: process.env.DB_NAME,   // Nome do banco de dados
+  password: process.env.DB_PASS,   // Senha do banco de dados
+  port: process.env.DB_PORT || 5432, // Porta do banco de dados (5432 por padrão)
 });
 
-sequelize.authenticate()
-  .then(() => console.log('Conexão com o banco de dados foi bem-sucedida.'))
-  .catch((err) => console.error('Erro ao conectar com o banco de dados:', err));
+// Função para verificar a conexão com o banco
+pool.connect((err, client, release) => {
+  if (err) {
+    return console.error('Erro ao conectar ao banco de dados:', err);
+  }
+  console.log('Conexão com o banco de dados foi bem-sucedida.');
+  release(); // Libera o cliente após a conexão bem-sucedida
+});
 
-module.exports = sequelize;
+module.exports = pool;
