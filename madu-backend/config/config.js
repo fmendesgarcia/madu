@@ -3,6 +3,8 @@ require('dotenv').config({ path: './madu-backend/.env' });
 const { Pool } = require('pg');
 
 // Configuração do pool de conexões com o PostgreSQL
+
+
 const pool = new Pool({
   user: process.env.DB_USER,       // Usuário do banco de dados
   host: process.env.DB_HOST,       // Endereço do banco de dados (localhost ou outro)
