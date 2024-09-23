@@ -1,0 +1,6 @@
+truncate table public.presencas cascade;
+truncate table public.aulas cascade;
+truncate table public.turmas cascade;
+truncate table public.professores cascade;
+truncate table public.matriculas cascade;
+truncate table public.pagamentos cascade;

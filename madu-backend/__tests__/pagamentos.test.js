@@ -7,8 +7,45 @@ const pool = require('../config/config'); // Certifique-se de importar o pool de
 describe('Rotas de Pagamentos', () => {
 
   let pagamentoId;  // Armazena o ID do pagamento para usar nos testes
-  let alunoId = 1;  // Simulação de um aluno existente
-  let turmaId = 2;  // Simulação de uma turma existente
+  let alunoId;
+  let turmaId;
+  let professorId;
+
+// Insere um aluno e uma turma antes de cada teste
+beforeAll(async () => {
+// Inserir aluno
+    const alunoRes = await pool.query(`
+        INSERT INTO alunos (nome, sexo, data_nascimento, telefone, cpf, email, responsavel_financeiro, bolsista, endereco, cidade, estado, foto, contrato)
+        VALUES ('Aluno Teste', 'M', '2000-01-01', '11999999999', '12345678901', 'aluno@test.com', false, false, 'Rua A', 'Cidade B', 'SP', 'https://foto.com', 'https://contrato.com')
+        RETURNING id;
+    `);
+    alunoId = alunoRes.rows[0].id;
+
+    const professorRes = await pool.query(`
+        INSERT INTO professores (nome, apelido, sexo, cpf, telefone, email)
+        VALUES ('Professor Teste', 'Prof', 'M', '12345678901', '11999999999', 'prof@test.com')
+        RETURNING id;
+        `);
+    professorId = professorRes.rows[0].id;
+
+    // Insere a turma com o professor válido
+    const res = await pool.query(`
+        INSERT INTO turmas (nome, modalidade, nivel, professor_id, dias_da_semana, horario, max_alunos)
+        VALUES ('Turma Teste', 'Presencial', 'Iniciante', $1, 'Segunda, Quarta, Sexta', '18:00:00', 30)
+        RETURNING id;
+    `, [professorId]);
+    turmaId = res.rows[0].id;
+});
+
+// Remove a matrícula, o aluno e a turma após cada teste
+afterAll(async () => {
+await pool.query('DELETE FROM pagamentos WHERE id = $1', [pagamentoId]);
+await pool.query('DELETE FROM turmas WHERE id = $1', [turmaId]);
+await pool.query('DELETE FROM alunos WHERE id = $1', [alunoId]);
+});
+
+
+    
 
   // Teste para criar um novo pagamento
   it('deve criar um novo pagamento', async () => {
@@ -54,7 +91,8 @@ describe('Rotas de Pagamentos', () => {
       });
     
     expect(res.statusCode).toEqual(200);  // Verifica se o status code é 200 (OK)
-    expect(res.body).toHaveProperty('valor_pago', 450.00);  // Verifica se o valor foi atualizado corretamente
+    expect(parseFloat(res.body.valor_pago)).toBe(450.00);  // Converte o valor de string para número e compara
+
     expect(res.body).toHaveProperty('forma_pagamento', "boleto");  // Verifica se a forma de pagamento foi atualizada
   });
 

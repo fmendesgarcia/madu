@@ -3,12 +3,57 @@ const request = require('supertest');
 const app = require('../server');  // Certifique-se de que o caminho para o servidor está correto
 const pool = require('../config/config'); // Certifique-se de importar o pool de conexão
 
-
 describe('Rotas de Presenças', () => {
+  let presencaId;
+  let alunoId;
+  let aulaId;
 
-  let presencaId;  // Armazena o ID da presença para usar nos testes
-  let alunoId = 1;  // Simulação de um aluno existente
-  let aulaId = 1;  // Simulação de uma aula existente
+  beforeAll(async () => {
+    // Inserir um aluno para os testes
+    const alunoRes = await pool.query(`
+      INSERT INTO alunos (nome, sexo, data_nascimento, telefone, cpf, email, responsavel_financeiro, bolsista, endereco, cidade, estado)
+      VALUES ('Aluno Teste', 'M', '2000-01-01', '11999999999', '12345678901', 'aluno@test.com', true, false, 'Rua Teste', 'São Paulo', 'SP')
+      RETURNING id;
+    `);
+    alunoId = alunoRes.rows[0].id;
+
+    // Inserir um professor
+    const professorRes = await pool.query(`
+      INSERT INTO professores (nome, apelido, sexo, cpf, telefone, email)
+      VALUES ('Professor Teste', 'Prof', 'M', '12345678902', '11999999998', 'prof@test.com')
+      RETURNING id;
+    `);
+    const professorId = professorRes.rows[0].id;
+
+    // Inserir uma turma
+    const turmaRes = await pool.query(`
+      INSERT INTO turmas (nome, modalidade, nivel, professor_id, dias_da_semana, horario, max_alunos)
+      VALUES ('Turma Teste', 'Presencial', 'Iniciante', $1, 'Segunda, Quarta, Sexta', '18:00:00', 30)
+      RETURNING id;
+    `, [professorId]);
+    const turmaId = turmaRes.rows[0].id;
+
+    // Inserir uma aula para essa turma
+    const aulaRes = await pool.query(`
+      INSERT INTO aulas (turma_id, data, horario, duracao)
+      VALUES ($1, '2024-09-25', '18:00:00', 60)
+      RETURNING id;
+    `, [turmaId]);
+    aulaId = aulaRes.rows[0].id;
+  });
+
+  afterAll(async () => {
+    // Limpar a tabela de presenças
+    await pool.query('DELETE FROM presencas WHERE aula_id = $1', [aulaId]);
+
+    // Limpar as dependências: aulas, turmas, professores e alunos
+    await pool.query('DELETE FROM aulas WHERE id = $1', [aulaId]);
+    await pool.query('DELETE FROM turmas WHERE id = (SELECT turma_id FROM aulas WHERE id = $1)', [aulaId]);
+    await pool.query('DELETE FROM professores WHERE id = (SELECT professor_id FROM turmas WHERE id = (SELECT turma_id FROM aulas WHERE id = $1))', [aulaId]);
+    await pool.query('DELETE FROM alunos WHERE id = $1', [alunoId]);
+
+    await pool.end(); // Fecha a conexão com o banco de dados
+  });
 
   // Teste para registrar uma nova presença
   it('deve registrar uma nova presença', async () => {
@@ -66,8 +111,3 @@ describe('Rotas de Presenças', () => {
   });
 
 });
-
-
-afterAll(async () => {
-    await pool.end(); // Fecha a conexão com o banco de dados após todos os testes
-  });

@@ -51,7 +51,8 @@ describe('Rotas de Produtos', () => {
     
     expect(res.statusCode).toEqual(200);  // Verifica se o status code é 200 (OK)
     expect(res.body).toHaveProperty('nome', "Produto Atualizado");  // Verifica se o nome foi atualizado
-    expect(res.body).toHaveProperty('preco', 150.00);  // Verifica se o preço foi atualizado
+    //expect(res.body).toHaveProperty('preco', 150.00);  // Verifica se o preço foi atualizado
+    expect(parseFloat(res.body.preco)).toBe(150.00);  // Converte o valor de string para número e compara
   });
 
   // Teste para deletar um produto
