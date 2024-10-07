@@ -4,6 +4,11 @@ require('dotenv').config();
 
 const express = require('express');
 const app = express();
+
+// Habilita CORS para todas as rotas
+app.use(cors());
+
+
 const alunoRoutes = require('./routes/alunoRoutes');
 const professorRoutes = require('./routes/professorRoutes');
 const turmaRoutes = require('./routes/turmaRoutes');
