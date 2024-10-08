@@ -4,9 +4,14 @@ require('dotenv').config();
 
 const express = require('express');
 const app = express();
+const path = require('path');
 
 // Habilita CORS para todas as rotas
 app.use(cors());
+
+// Servir arquivos estáticos da pasta uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 
 const alunoRoutes = require('./routes/alunoRoutes');

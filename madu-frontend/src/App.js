@@ -5,6 +5,8 @@ import Professores from './pages/Professores';
 import ProfessorForm from './pages/ProfessorForm';
 import Alunos from './pages/Alunos';
 import AlunoForm from './pages/AlunosForm';
+import Turmas from './pages/Turmas';
+import TurmaForm from './pages/TurmasForm';
 import MenuLateral from './components/MenuLateral';
 import { Box, CssBaseline } from '@mui/material';
 
@@ -39,6 +41,11 @@ function App() {
             <Route path="/alunos" element={<Alunos />} />
             <Route path="/alunos/novo" element={<AlunoForm />} />
             <Route path="/alunos/:id/editar" element={<AlunoForm />} />
+
+
+            <Route path="/turmas" element={<Turmas />} />
+            <Route path="/turmas/novo" element={<TurmaForm />} />
+            <Route path="/turmas/:id/editar" element={<TurmaForm />} />
 
 
           </Routes>

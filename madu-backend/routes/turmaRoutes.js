@@ -7,13 +7,16 @@ router.post('/', async (req, res) => {
   try {
     const { nome, modalidade, nivel, professor_id, dias_da_semana, horario, max_alunos } = req.body;
     
+    // Converter array de dias_da_semana em uma string separada por vírgulas
+    const diasDaSemanaStr = dias_da_semana.join(',');
+
     const query = `
       INSERT INTO turmas (nome, modalidade, nivel, professor_id, dias_da_semana, horario, max_alunos)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *;
     `;
     
-    const values = [nome, modalidade, nivel, professor_id, dias_da_semana, horario, max_alunos];
+    const values = [nome, modalidade, nivel, professor_id, diasDaSemanaStr, horario, max_alunos];
     
     const result = await pool.query(query, values);
     res.status(201).json(result.rows[0]); // Retorna a turma criada
@@ -22,6 +25,7 @@ router.post('/', async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+
 
 // Rota para listar todas as turmas
 router.get('/', async (req, res) => {
@@ -52,6 +56,8 @@ router.get('/:id', async (req, res) => {
     const turma = result.rows[0];
     
     if (turma) {
+      // Converter a string de dias_da_semana de volta para um array
+      turma.dias_da_semana = turma.dias_da_semana.split(',');
       res.json(turma);
     } else {
       res.status(404).json({ message: 'Turma não encontrada' });
@@ -67,6 +73,9 @@ router.put('/:id', async (req, res) => {
   try {
     const { nome, modalidade, nivel, professor_id, dias_da_semana, horario, max_alunos } = req.body;
     
+    // Converter array de dias_da_semana em uma string separada por vírgulas
+    const diasDaSemanaStr = dias_da_semana.join(',');
+
     const query = `
       UPDATE turmas
       SET nome = $1, modalidade = $2, nivel = $3, professor_id = $4, dias_da_semana = $5, horario = $6, max_alunos = $7, updated_at = NOW()
@@ -74,7 +83,7 @@ router.put('/:id', async (req, res) => {
       RETURNING *;
     `;
     
-    const values = [nome, modalidade, nivel, professor_id, dias_da_semana, horario, max_alunos, req.params.id];
+    const values = [nome, modalidade, nivel, professor_id, diasDaSemanaStr, horario, max_alunos, req.params.id];
     
     const result = await pool.query(query, values);
     const turmaAtualizada = result.rows[0];
