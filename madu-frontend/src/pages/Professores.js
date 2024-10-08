@@ -1,13 +1,14 @@
 // src/pages/Professores.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import CustomTable from '../components/CustomTable';
+import { Button } from '@mui/material';
 
 const Professores = () => {
   const [professores, setProfessores] = useState([]);
+  const navigate = useNavigate();
 
-  // Função para buscar a lista de professores
   useEffect(() => {
     axios.get('http://localhost:5001/professores')
       .then((response) => {
@@ -18,7 +19,6 @@ const Professores = () => {
       });
   }, []);
 
-  // Função para excluir um professor
   const handleDelete = (id) => {
     if (window.confirm('Tem certeza que deseja excluir este professor?')) {
       axios.delete(`http://localhost:5001/professores/${id}`)
@@ -31,41 +31,22 @@ const Professores = () => {
     }
   };
 
+  const handleEdit = (id) => {
+    navigate(`/professores/${id}/editar`);
+  };
+
+  const columns = [
+    { id: 'nome', label: 'Nome' },
+    { id: 'apelido', label: 'Apelido' },
+    { id: 'email', label: 'Email' },
+    { id: 'sexo', label: 'Sexo' },
+  ];
+
   return (
     <div>
       <h2>Lista de Professores</h2>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Nome</TableCell>
-              <TableCell>Apelido</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Sexo</TableCell>
-              <TableCell>Ações</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {professores.map((professor) => (
-              <TableRow key={professor.id}>
-                <TableCell>{professor.nome}</TableCell>
-                <TableCell>{professor.apelido}</TableCell>
-                <TableCell>{professor.email}</TableCell>
-                <TableCell>{professor.sexo}</TableCell>
-                <TableCell>
-                  <Button variant="contained" component={Link} to={`/professores/${professor.id}/editar`} style={{ marginRight: '10px' }}>
-                    Editar
-                  </Button>
-                  <Button variant="contained" color="error" onClick={() => handleDelete(professor.id)}>
-                    Excluir
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <Button variant="contained" color="primary" component={Link} to="/professores/novo" style={{ marginTop: '20px' }}>
+      <CustomTable columns={columns} data={professores} handleEdit={handleEdit} handleDelete={handleDelete} />
+      <Button variant="contained" color="primary" onClick={() => navigate('/professores/novo')} style={{ marginTop: '20px' }}>
         Adicionar Novo Professor
       </Button>
     </div>
