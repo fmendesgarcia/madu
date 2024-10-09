@@ -3,10 +3,20 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Professores from './pages/Professores';
 import ProfessorForm from './pages/ProfessorForm';
+
 import Alunos from './pages/Alunos';
 import AlunoForm from './pages/AlunosForm';
+
 import Turmas from './pages/Turmas';
 import TurmaForm from './pages/TurmasForm';
+
+import Aulas from './pages/Aulas';
+import AulaForm from './pages/AulasForm';
+
+import Matriculas from './pages/Matriculas';
+import MatriculaForm from './pages/MatriculasForm';
+
+
 import MenuLateral from './components/MenuLateral';
 import { Box, CssBaseline } from '@mui/material';
 
@@ -46,6 +56,16 @@ function App() {
             <Route path="/turmas" element={<Turmas />} />
             <Route path="/turmas/novo" element={<TurmaForm />} />
             <Route path="/turmas/:id/editar" element={<TurmaForm />} />
+
+            {/* Outras rotas */}
+            <Route path="/aulas" element={<Aulas />} />
+            <Route path="/aulas/nova" element={<AulaForm />} />
+            <Route path="/aulas/:id/editar" element={<AulaForm />} />
+
+            
+            <Route path="/matriculas" element={<Matriculas />} />
+            <Route path="/matriculas/novo" element={<MatriculaForm />} />
+            <Route path="/matriculas/:id/editar" element={<MatriculaForm />} />
 
 
           </Routes>

@@ -5,12 +5,17 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Button, FormControlLabel, Checkbox, TextField, Typography} from '@mui/material';
 import FormInput from '../components/FormInput';
 import FormSelect from '../components/FormSelect';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { parseISO, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale'; // Importa a localização para português
+
 
 const AlunoForm = () => {
   const [form, setForm] = useState({
     nome: '',
     sexo: '',
-    data_nascimento: '',
+    data_nascimento: null,
     telefone: '',
     cpf: '',
     email: '',
@@ -36,14 +41,14 @@ const AlunoForm = () => {
         .then((response) => {
           const aluno = response.data;
   
-          // Formatar a data de nascimento no formato 'YYYY-MM-DD' para o campo do tipo date
+          // Converter a data de nascimento para um objeto Date
           if (aluno.data_nascimento) {
-            aluno.data_nascimento = new Date(aluno.data_nascimento).toISOString().split('T')[0];
+            aluno.data_nascimento = parseISO(aluno.data_nascimento);
           }
-          
+  
           setForm(aluno);
-          setFotoPreview(aluno.foto ? `http://localhost:5001/${aluno.foto}` : null);  // Define o link da foto corretamente
-          setContratoLink(aluno.contrato ? `http://localhost:5001/${aluno.contrato}` : null);  // Define o link do contrato
+          setFotoPreview(aluno.foto ? `http://localhost:5001/${aluno.foto}` : null);
+          setContratoLink(aluno.contrato ? `http://localhost:5001/${aluno.contrato}` : null);
         })
         .catch((error) => console.error('Erro ao buscar aluno:', error));
     }
@@ -62,6 +67,12 @@ const AlunoForm = () => {
       [name]: type === 'checkbox' ? checked : value
     });
   };
+  const handleDateChange = (date) => {
+    setForm({
+      ...form,
+      data_nascimento: date
+    });
+  };
   const handleRemoveFile = (fileType) => {
     if (fileType === 'foto') {
       setForm({ ...form, foto: '' });
@@ -76,17 +87,24 @@ const AlunoForm = () => {
   
   const handleSubmit = (e) => {
     e.preventDefault();
+  
     const formData = new FormData();
+  
     Object.keys(form).forEach((key) => {
-      formData.append(key, form[key]);
+      if (key === 'data_nascimento' && form.data_nascimento) {
+        // Converte a data para o formato yyyy-MM-dd
+        formData.append('data_nascimento', format(form.data_nascimento, 'yyyy-MM-dd'));
+      } else {
+        formData.append(key, form[key]);
+      }
     });
   
     // Adicionar informação sobre remoção de arquivos, se aplicável
     if (fotoRemovida) {
-      formData.append('fotoRemovida', true);
+      formData.append('fotoRemovida', 'true');
     }
     if (contratoRemovido) {
-      formData.append('contratoRemovido', true);
+      formData.append('contratoRemovido', 'true');
     }
   
     if (id) {
@@ -105,6 +123,7 @@ const AlunoForm = () => {
         .catch((error) => console.error('Erro ao adicionar aluno:', error));
     }
   };
+  
 
   const sexoOptions = [
     { value: 'M', label: 'Masculino' },
@@ -116,7 +135,16 @@ const AlunoForm = () => {
       <h2>{id ? 'Editar Aluno' : 'Adicionar Aluno'}</h2>
       <FormInput label="Nome" name="nome" value={form.nome} onChange={handleChange} required />
       <FormSelect label="Sexo" name="sexo" value={form.sexo} onChange={handleChange} options={sexoOptions} required />
-      <FormInput label="Data de Nascimento" name="data_nascimento" value={form.data_nascimento} onChange={handleChange} type="date" required />
+
+      {/* Campo de data com react-datepicker estilizado */}
+      <DatePicker
+        selected={form.data_nascimento}
+        onChange={handleDateChange}
+        dateFormat="dd/MM/yyyy"
+        locale={ptBR} // Localização em português
+        customInput={<TextField label="Data de Nascimento" fullWidth required />} // Usa o TextField do MUI para consistência
+      />
+
       <FormInput label="Telefone" name="telefone" value={form.telefone} onChange={handleChange} required />
       <FormInput label="CPF" name="cpf" value={form.cpf} onChange={handleChange} required />
       <FormInput label="Email" name="email" value={form.email} onChange={handleChange} type="email" required />
