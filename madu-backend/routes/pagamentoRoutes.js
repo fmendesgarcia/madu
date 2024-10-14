@@ -2,26 +2,81 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/config'); // Conexão com PostgreSQL
 
-// Rota para criar um novo pagamento
+// Rota para criar um novo pagamento e atualizar a mensalidade
 router.post('/', async (req, res) => {
+  const client = await pool.connect(); // Usar um cliente específico para a transação
   try {
-    const { aluno_id, turma_id, data_pagamento, valor_pago, forma_pagamento } = req.body;
-    
-    const query = `
-      INSERT INTO pagamentos (aluno_id, turma_id, data_pagamento, valor_pago, forma_pagamento)
-      VALUES ($1, $2, $3, $4, $5)
+    const { mensalidade_id, data_pagamento, valor_pago, forma_pagamento } = req.body;
+
+    if (!mensalidade_id || !data_pagamento || !valor_pago || !forma_pagamento) {
+      return res.status(400).json({ message: 'Dados incompletos' });
+    }
+
+    await client.query('BEGIN'); // Iniciar transação
+
+    // Obter aluno_id e turma_id a partir da mensalidade
+    const mensalidadeQuery = `
+      SELECT matriculas.aluno_id, matriculas.turma_id 
+      FROM mensalidades
+      JOIN matriculas ON mensalidades.matricula_id = matriculas.id
+      WHERE mensalidades.id = $1;
+    `;
+    const mensalidadeResult = await client.query(mensalidadeQuery, [mensalidade_id]);
+
+    if (mensalidadeResult.rows.length === 0) {
+      await client.query('ROLLBACK'); // Desfazer transação se a mensalidade não for encontrada
+      return res.status(404).json({ message: 'Mensalidade não encontrada' });
+    }
+
+    const { aluno_id, turma_id } = mensalidadeResult.rows[0];
+
+    // Inserir o pagamento na tabela de pagamentos
+    const pagamentoQuery = `
+      INSERT INTO pagamentos (aluno_id, turma_id, mensalidade_id, data_pagamento, valor_pago, forma_pagamento)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *;
     `;
-    
-    const values = [aluno_id, turma_id, data_pagamento, valor_pago, forma_pagamento];
-    
-    const result = await pool.query(query, values);
-    res.status(201).json(result.rows[0]); // Retorna o pagamento criado
+    const pagamentoValues = [aluno_id, turma_id, mensalidade_id, data_pagamento, valor_pago, forma_pagamento];
+    const pagamentoResult = await client.query(pagamentoQuery, pagamentoValues);
+
+    // Atualizar o status da mensalidade para "pago" e definir a data de pagamento
+    const atualizarMensalidadeQuery = `
+      UPDATE mensalidades
+      SET status = 'pago', data_pagamento = $1
+      WHERE id = $2
+      RETURNING *;
+    `;
+    const mensalidadeAtualizada = await client.query(atualizarMensalidadeQuery, [data_pagamento, mensalidade_id]);
+
+    // **Aqui entra a atualização do lançamento**
+    if (mensalidadeAtualizada.rows.length > 0) {
+      const lancamentoQuery = `
+        UPDATE lancamentos
+        SET status = 'efetivada', updated_at = NOW()
+        WHERE id = (
+          SELECT lancamento_id FROM mensalidades WHERE id = $1
+        );
+      `;
+      await pool.query(lancamentoQuery, [mensalidade_id]);
+
+      await client.query('COMMIT'); // Confirmar transação se tudo deu certo
+      res.status(201).json({
+        pagamento: pagamentoResult.rows[0],
+        mensalidadeAtualizada: mensalidadeAtualizada.rows[0],
+      });
+    } else {
+      await client.query('ROLLBACK'); // Desfazer transação se a atualização da mensalidade falhar
+      res.status(404).json({ message: 'Mensalidade não encontrada para ser atualizada' });
+    }
   } catch (error) {
-    console.error('Erro ao criar pagamento:', error);
+    await client.query('ROLLBACK'); // Desfazer transação em caso de erro
+    console.error('Erro ao registrar pagamento:', error);
     res.status(400).json({ error: error.message });
+  } finally {
+    client.release(); // Liberar o cliente
   }
 });
+
 
 // Rota para listar todos os pagamentos
 router.get('/', async (req, res) => {
@@ -109,15 +164,3 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
-
-
-// curl -X POST http://localhost:5000/pagamentos \
-// -H 'Content-Type: application/json' \
-// -d '{
-//   "aluno_id": 1,
-//   "turma_id": 2,
-//   "data_pagamento": "2024-09-25",
-//   "valor_pago": 500.00,
-//   "forma_pagamento": "cartão"
-// }'
-

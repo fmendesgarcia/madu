@@ -16,6 +16,14 @@ import AulaForm from './pages/AulasForm';
 import Matriculas from './pages/Matriculas';
 import MatriculaForm from './pages/MatriculasForm';
 
+import Mensalidades from './pages/Mensalidades';
+import Pagamentos from './pages/Pagamentos';
+
+import Dashboard from './pages/Dashboard';
+
+import GerenciarLancamentos from './pages/Lancamentos';
+
+
 
 import MenuLateral from './components/MenuLateral';
 import { Box, CssBaseline } from '@mui/material';
@@ -66,6 +74,18 @@ function App() {
             <Route path="/matriculas" element={<Matriculas />} />
             <Route path="/matriculas/novo" element={<MatriculaForm />} />
             <Route path="/matriculas/:id/editar" element={<MatriculaForm />} />
+
+
+            <Route path="/financeiro/mensalidades" element={<Mensalidades />} />
+            <Route path="/financeiro/pagamentos" element={<Pagamentos />} />
+
+            <Route path="/financeiro/lancamentos" element={<GerenciarLancamentos />} />
+
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            {/* Outras rotas */}
+
+
 
 
           </Routes>

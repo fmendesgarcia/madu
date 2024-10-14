@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Box, Button, FormControlLabel, Checkbox, TextField } from '@mui/material';
+import { Box, Button, FormControlLabel, Checkbox, TextField, MenuItem, Select, InputLabel, FormControl, RadioGroup, Radio, FormLabel } from '@mui/material';
 import FormSelect from '../components/FormSelect';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -10,7 +10,7 @@ import { ptBR } from 'date-fns/locale';
 const MatriculaForm = () => {
   const [form, setForm] = useState({
     aluno_id: '',
-    turma_id: '',
+    turmas_ids: [], // Mudança para array para múltiplas turmas
     data_matricula: '',
     status: 'ativa',
     mensalidade: '',
@@ -19,10 +19,13 @@ const MatriculaForm = () => {
     desconto: '',
     isencao_taxa: false,
     bolsista: false,
+    gerarMensalidade: false,
+    valor_matricula: '', // Novo campo
   });
 
   const [alunos, setAlunos] = useState([]);
   const [turmas, setTurmas] = useState([]);
+  const [parcelasGeradas, setParcelasGeradas] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -40,7 +43,6 @@ const MatriculaForm = () => {
         .then(response => {
           const matricula = response.data;
 
-          // Formatar as datas para exibição correta
           if (matricula.data_matricula) {
             matricula.data_matricula = new Date(matricula.data_matricula);
           }
@@ -51,7 +53,15 @@ const MatriculaForm = () => {
             matricula.data_final_contrato = new Date(matricula.data_final_contrato);
           }
 
-          setForm(matricula);
+          if (matricula.parcelasGeradas) {
+            setParcelasGeradas(true);
+          }
+
+          if (matricula.mensalidade || matricula.data_vencimento || matricula.data_final_contrato) {
+            matricula.gerarMensalidade = true;
+          }
+
+          setForm({ ...matricula, turmas_ids: matricula.turmas_ids || [] });
         })
         .catch(error => console.error('Erro ao buscar matrícula:', error));
     }
@@ -64,6 +74,16 @@ const MatriculaForm = () => {
       [name]: type === 'checkbox' ? checked : value,
     });
   };
+
+  const handleTurmaChange = (event) => {
+    const { value } = event.target;
+    setForm({
+      ...form,
+      turmas_ids: value, // Como o `Select` permite múltiplos, ele já retorna um array
+    });
+  };
+  
+  
 
   const handleDateChange = (name, date) => {
     setForm({
@@ -100,9 +120,29 @@ const MatriculaForm = () => {
     <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: '400px', margin: '0 auto' }}>
       <h2>{id ? 'Editar Matrícula' : 'Adicionar Matrícula'}</h2>
       <FormSelect label="Aluno" name="aluno_id" value={form.aluno_id} onChange={handleChange} options={alunoOptions} required />
-      <FormSelect label="Turma" name="turma_id" value={form.turma_id} onChange={handleChange} options={turmaOptions} required />
-      
-      {/* Data de Matrícula */}
+      {/* Substituindo FormSelect por Select para múltiplas turmas */}
+      <FormControl fullWidth>
+        <InputLabel id="turmas-label">Turmas</InputLabel>
+        <Select
+          labelId="turmas-label"
+          id="turmas"
+          multiple
+          value={form.turmas_ids}
+          onChange={handleTurmaChange}
+          renderValue={(selected) => selected.map(turmaId => turmaOptions.find(turma => turma.value === turmaId).label).join(', ')} // Mostra os nomes das turmas selecionadas
+        >
+          {turmaOptions.map((turma) => (
+            <MenuItem key={turma.value} value={turma.value}>
+              {turma.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      {/* Exibindo as turmas selecionadas */}
+      {Array.isArray(form.turmas_ids) && form.turmas_ids.map(turmaId => (
+        <div key={turmaId}>Turma selecionada: {turmaId}</div>
+      ))}
       <DatePicker
         selected={form.data_matricula}
         onChange={date => handleDateChange('data_matricula', date)}
@@ -110,35 +150,76 @@ const MatriculaForm = () => {
         locale={ptBR}
         customInput={<TextField label="Data da Matrícula" fullWidth required />}
       />
-      
-      {/* Status */}
-      <TextField label="Status" name="status" value={form.status} onChange={handleChange} required />
-      
-      {/* Mensalidade */}
-      <TextField label="Mensalidade" name="mensalidade" value={form.mensalidade} onChange={handleChange} required />
-      
-      {/* Data de Vencimento */}
-      <DatePicker
-        selected={form.data_vencimento}
-        onChange={date => handleDateChange('data_vencimento', date)}
-        dateFormat="dd/MM/yyyy"
-        locale={ptBR}
-        customInput={<TextField label="Data de Vencimento" fullWidth required />}
-      />
-      
-      {/* Data Final do Contrato */}
-      <DatePicker
-        selected={form.data_final_contrato}
-        onChange={date => handleDateChange('data_final_contrato', date)}
-        dateFormat="dd/MM/yyyy"
-        locale={ptBR}
-        customInput={<TextField label="Data Final do Contrato" fullWidth required />}
-      />
-      
-      {/* Desconto */}
-      <TextField label="Desconto" name="desconto" value={form.desconto} onChange={handleChange} />
 
-      {/* Checkboxes */}
+
+    <FormControl component="fieldset" required>
+      <FormLabel component="legend">Status</FormLabel>
+      <RadioGroup
+        aria-label="status"
+        name="status"
+        value={form.status}
+        onChange={handleChange}
+      >
+        <FormControlLabel value="ativa" control={<Radio />} label="Ativa" />
+        <FormControlLabel value="inativa" control={<Radio />} label="Inativa" />
+      </RadioGroup>
+    </FormControl>
+
+      <TextField 
+            label="Valor Matricula" 
+            name="valor_matricula" 
+            value={form.valor_matricula} 
+            onChange={handleChange} 
+            required 
+            disabled={parcelasGeradas} // Desabilitar se as parcelas já foram geradas
+          />
+      
+      <FormControlLabel
+        control={
+          <Checkbox
+            name="gerarMensalidade"
+            checked={form.gerarMensalidade}
+            onChange={handleChange}
+            disabled={parcelasGeradas} // Desabilitar o checkbox se as parcelas já foram geradas
+          />
+        }
+        label="Gerar Mensalidade"
+      />
+
+      {form.gerarMensalidade && (
+        <Box sx={{ border: '1px solid #ccc', padding: '16px', borderRadius: '8px' }}>
+          <TextField 
+            label="Mensalidade" 
+            name="mensalidade" 
+            value={form.mensalidade} 
+            onChange={handleChange} 
+            required 
+            disabled={parcelasGeradas} // Desabilitar se as parcelas já foram geradas
+          />
+          <DatePicker
+            selected={form.data_vencimento}
+            onChange={date => handleDateChange('data_vencimento', date)}
+            dateFormat="dd/MM/yyyy"
+            locale={ptBR}
+            customInput={<TextField label="Data de Vencimento" fullWidth required disabled={parcelasGeradas} />}
+          />
+          <DatePicker
+            selected={form.data_final_contrato}
+            onChange={date => handleDateChange('data_final_contrato', date)}
+            dateFormat="dd/MM/yyyy"
+            locale={ptBR}
+            customInput={<TextField label="Data Final do Contrato" fullWidth required disabled={parcelasGeradas} />}
+          />
+          <TextField 
+            label="Desconto" 
+            name="desconto" 
+            value={form.desconto} 
+            onChange={handleChange} 
+            disabled={parcelasGeradas} 
+          />
+        </Box>
+      )}
+
       <FormControlLabel
         control={
           <Checkbox

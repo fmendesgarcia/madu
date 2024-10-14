@@ -24,6 +24,12 @@ const pagamentoRoutes = require('./routes/pagamentoRoutes');
 const fluxoCaixaRoutes = require('./routes/fluxoCaixaRoutes');
 const produtoRoutes = require('./routes/produtoRoutes');
 const vendaRoutes = require('./routes/vendaRoutes');
+const mensalidadeRoutes = require('./routes/mensalidadeRoutes');
+const lancamentoRoutes = require('./routes/lancamentoRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
+
+
+
 
 // Middleware para permitir JSON no corpo das requisições
 app.use(express.json());
@@ -39,6 +45,13 @@ app.use('/pagamentos', pagamentoRoutes);
 app.use('/fluxo_caixa', fluxoCaixaRoutes);
 app.use('/produtos', produtoRoutes);
 app.use('/vendas', vendaRoutes);
+app.use('/mensalidades', mensalidadeRoutes);
+app.use('/lancamentos', lancamentoRoutes);
+app.use('/dashboard', dashboardRoutes);
+
+
+
+
 
 // Exporta o app sem iniciar o servidor
 module.exports = app;

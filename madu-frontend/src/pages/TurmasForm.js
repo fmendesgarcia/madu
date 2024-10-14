@@ -14,15 +14,28 @@ const diasDaSemanaOptions = [
     { label: 'Sexta', value: 'Sexta' },
     { label: 'Sábado', value: 'Sábado' },
     { label: 'Domingo', value: 'Domingo' },
-  ];
+];
+
+const modalidadeOptions = [
+    { value: 'Ballet', label: 'Ballet' },
+    { value: 'Jazz', label: 'Jazz' },
+    { value: 'Contemporâneo', label: 'Contemporâneo' },
+    { value: 'Hip Hop', label: 'Hip Hop' },
+];
+
+const tipoOptions = [
+    { value: 'Presencial', label: 'Presencial' },
+    { value: 'Online', label: 'Online' },
+];
 
 const TurmaForm = () => {
   const [form, setForm] = useState({
     nome: '',
     modalidade: '',
+    tipo: '',
     nivel: '',
     professor_id: '',
-    dias_da_semana: '',
+    dias_da_semana: [],
     horario: '',
     max_alunos: '',
   });
@@ -33,17 +46,18 @@ const TurmaForm = () => {
 
   // Função para carregar dados ao editar
   useEffect(() => {
-
-
     axios.get('http://localhost:5001/professores')
       .then((response) => setProfessores(response.data))
       .catch((error) => console.error('Erro ao buscar professores:', error));
 
-      
     if (id) {
       axios.get(`http://localhost:5001/turmas/${id}`)
         .then((response) => {
-          setForm(response.data);
+          const turma = response.data;
+          if (turma.dias_da_semana && typeof turma.dias_da_semana === 'string') {
+            turma.dias_da_semana = turma.dias_da_semana.split(',');
+          }
+          setForm(turma);
         })
         .catch((error) => console.error('Erro ao buscar turma:', error));
     }
@@ -66,8 +80,6 @@ const TurmaForm = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-
     if (id) {
       axios.put(`http://localhost:5001/turmas/${id}`, form)
         .then(() => navigate('/turmas'))
@@ -79,18 +91,19 @@ const TurmaForm = () => {
     }
   };
 
-
-  const modalidadeOptions = [
-    { value: 'Presencial', label: 'Presencial' },
-    { value: 'Online', label: 'Online' },
-  ];
-
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: '400px', margin: '0 auto' }}>
       <h2>{id ? 'Editar Turma' : 'Adicionar Turma'}</h2>
       <FormInput label="Nome" name="nome" value={form.nome} onChange={handleChange} required />
+      
+      {/* Campo para selecionar a Modalidade (tipo de dança) */}
       <FormSelect label="Modalidade" name="modalidade" value={form.modalidade} onChange={handleChange} options={modalidadeOptions} required />
+      
+      {/* Campo para selecionar o Tipo (Presencial ou Online) */}
+      <FormSelect label="Tipo" name="tipo" value={form.tipo} onChange={handleChange} options={tipoOptions} required />
+      
       <FormInput label="Nível" name="nivel" value={form.nivel} onChange={handleChange} />
+
       <FormSelect
         label="Professor"
         name="professor_id"
@@ -103,8 +116,8 @@ const TurmaForm = () => {
         required
       />
 
-    {/* Checkboxes para Dias da Semana */}
-    <Box>
+      {/* Checkboxes para Dias da Semana */}
+      <Box>
         <label>Dias da Semana:</label>
         {diasDaSemanaOptions.map((option) => (
           <FormControlLabel
@@ -121,7 +134,6 @@ const TurmaForm = () => {
         ))}
       </Box>
 
-
       <FormInput label="Horário" name="horario" value={form.horario} onChange={handleChange} type="time" required />
       <FormInput label="Máximo de Alunos" name="max_alunos" value={form.max_alunos} onChange={handleChange} type="number" required />
       
@@ -133,4 +145,3 @@ const TurmaForm = () => {
 };
 
 export default TurmaForm;
-

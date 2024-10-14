@@ -1,30 +1,33 @@
 import React, { useState } from 'react';
-import { Drawer, List, ListItem, ListItemIcon, ListItemText, Box, Toolbar, IconButton, Typography, Divider } from '@mui/material';
-import { Dashboard, School, Group, Class, Menu as MenuIcon, Assignment, AttachMoney, Event, BarChart } from '@mui/icons-material';
+import { Drawer, List, ListItem, ListItemIcon, ListItemText, Box, IconButton, Typography, Divider, Collapse } from '@mui/material';
+import { Dashboard, School, Group, Class, Menu as MenuIcon, Assignment, AttachMoney, Event, BarChart, ExpandLess, ExpandMore, MonetizationOn, Receipt, Payments, MusicNote } from '@mui/icons-material';
 import { Link, useLocation } from 'react-router-dom';
 
 const MenuLateral = () => {
   const [open, setOpen] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState(null);
+  const [financeOpen, setFinanceOpen] = useState(false);
   const location = useLocation();
 
   const menuItems = [
-    { text: 'Dashboard', icon: <Dashboard />, link: '/' },
+    { text: 'Dashboard', icon: <Dashboard />, link: '/dashboard' },
     { text: 'Alunos', icon: <Group />, link: '/alunos' },
     { text: 'Professores', icon: <School />, link: '/professores' },
     { text: 'Turmas', icon: <Class />, link: '/turmas' },
     { text: 'Aulas', icon: <Assignment />, link: '/aulas' },
     { text: 'Matrículas', icon: <Assignment />, link: '/matriculas' },
-    { text: 'Financeiro', icon: <AttachMoney />, link: '/financeiro' },
     { text: 'Eventos', icon: <Event />, link: '/eventos' },
     { text: 'Relatórios', icon: <BarChart />, link: '/relatorios' },
   ];
 
-  // Atualiza o item selecionado com base no link atual
   React.useEffect(() => {
     const currentItem = menuItems.findIndex(item => item.link === location.pathname);
     setSelectedIndex(currentItem);
   }, [location.pathname]);
+
+  const handleFinanceClick = () => {
+    setFinanceOpen(!financeOpen);
+  };
 
   return (
     <Drawer
@@ -37,21 +40,24 @@ const MenuLateral = () => {
         "& .MuiDrawer-paper": {
           width: open ? 240 : 60,
           boxSizing: 'border-box',
+          backgroundColor: '#2c3e50',
+          color: '#ecf0f1',
           transition: 'width 0.3s',
         },
       }}
     >
-      <Toolbar>
+      <Box display="flex" justifyContent="space-between" alignItems="center" padding={1}>
         <IconButton onClick={() => setOpen(!open)}>
-          <MenuIcon />
+          <MenuIcon style={{ color: '#ecf0f1' }} />
         </IconButton>
         {open && (
-          <Box ml={5}>
-            <Typography variant="h6">Minha Logo</Typography>
-          </Box>
+          <Typography variant="h6" style={{ color: '#ecf0f1' }}>
+            <MusicNote /> {/* Ícone de música */}
+            Dança Logo
+          </Typography>
         )}
-      </Toolbar>
-      <Divider />
+      </Box>
+      <Divider style={{ backgroundColor: '#bdc3c7' }} />
       <List>
         {menuItems.map((item, index) => (
           <ListItem
@@ -62,13 +68,13 @@ const MenuLateral = () => {
             selected={index === selectedIndex}
             onClick={() => setSelectedIndex(index)}
             sx={{
-              backgroundColor: index === selectedIndex ? '#dfe4ea' : 'transparent',
-              color: index === selectedIndex ? '#000' : '#1e2222',
+              backgroundColor: index === selectedIndex ? '#34495e' : 'transparent',
+              color: '#ecf0f1',
               "& .MuiListItemIcon-root": {
-                color: index === selectedIndex ? '#2980b9' : '#95a5a6',
+                color: '#ecf0f1', // Mantém o ícone branco
               },
               '&:hover': {
-                backgroundColor: '#ecf0f1',
+                backgroundColor: '#1abc9c',
               },
             }}
           >
@@ -76,6 +82,53 @@ const MenuLateral = () => {
             {open && <ListItemText primary={item.text} />}
           </ListItem>
         ))}
+
+        {/* Item Financeiro com submenu */}
+        <ListItem button onClick={handleFinanceClick}>
+          <ListItemIcon>
+            <AttachMoney style={{ color: '#ecf0f1' }} /> {/* Mantém o ícone branco */}
+          </ListItemIcon>
+          {open && <ListItemText primary="Financeiro" />}
+          {open && (financeOpen ? <ExpandLess /> : <ExpandMore />)}
+        </ListItem>
+
+        <Collapse in={financeOpen} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            <ListItem
+              button
+              component={Link}
+              to="/financeiro/mensalidades"
+              sx={{ pl: 4 }}
+            >
+              <ListItemIcon>
+                <MonetizationOn style={{ color: '#ecf0f1' }} /> {/* Mantém o ícone branco */}
+              </ListItemIcon>
+              <ListItemText primary="Mensalidades" sx={{ color: '#ecf0f1' }} /> {/* Mantém o texto claro */}
+            </ListItem>
+            <ListItem
+              button
+              component={Link}
+              to="/financeiro/pagamentos"
+              sx={{ pl: 4 }}
+            >
+              <ListItemIcon>
+                <Payments style={{ color: '#ecf0f1' }} /> {/* Mantém o ícone branco */}
+              </ListItemIcon>
+              <ListItemText primary="Pagamentos" sx={{ color: '#ecf0f1' }} /> {/* Mantém o texto claro */}
+            </ListItem>
+            <ListItem
+              button
+              component={Link}
+              to="/financeiro/lancamentos"
+              sx={{ pl: 4 }}
+            >
+              <ListItemIcon>
+                <Receipt style={{ color: '#ecf0f1' }} /> {/* Mantém o ícone branco */}
+              </ListItemIcon>
+              <ListItemText primary="Lançamentos" sx={{ color: '#ecf0f1' }} /> {/* Mantém o texto claro */}
+            </ListItem>
+          </List>
+        </Collapse>
       </List>
     </Drawer>
   );

@@ -23,11 +23,32 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Rota para listar todas as mensalidades
+// Rota para listar todas as mensalidades junto com aluno e turmas
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM mensalidades ORDER BY data_vencimento ASC;');
-    res.json(result.rows); // Retorna a lista de mensalidades
+    const query = `
+      SELECT
+        mensalidades.id,
+        mensalidades.valor,
+        mensalidades.data_vencimento,
+        mensalidades.status,
+        mensalidades.data_pagamento,
+        mensalidades.desconto,
+        alunos.nome AS aluno_nome,
+        COALESCE(STRING_AGG(turmas.nome, ', '), 'Sem turma') AS turmas_nomes
+      FROM mensalidades
+      JOIN matriculas ON mensalidades.matricula_id = matriculas.id
+      JOIN alunos ON matriculas.aluno_id = alunos.id
+      LEFT JOIN matriculas_turmas ON matriculas.id = matriculas_turmas.matricula_id
+      LEFT JOIN turmas ON matriculas_turmas.turma_id = turmas.id
+      GROUP BY mensalidades.id, alunos.nome
+      ORDER BY mensalidades.data_vencimento ASC;
+    `;
+
+    const result = await pool.query(query);
+
+    console.log("Dados retornados pelo banco de dados:", result.rows); // Verificação
+    res.json(result.rows); // Retorna a lista de mensalidades com aluno e turma
   } catch (error) {
     console.error('Erro ao listar mensalidades:', error);
     res.status(500).json({ error: error.message });
@@ -37,9 +58,27 @@ router.get('/', async (req, res) => {
 // Rota para buscar uma mensalidade por ID
 router.get('/:id', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM mensalidades WHERE id = $1;', [req.params.id]);
+    const query = `
+      SELECT
+        mensalidades.id,
+        mensalidades.valor,
+        mensalidades.data_vencimento,
+        mensalidades.status,
+        mensalidades.data_pagamento,
+        mensalidades.desconto,
+        alunos.nome AS aluno_nome,
+        STRING_AGG(turmas.nome, ', ') AS turmas_nomes -- Concatena as turmas em uma string
+      FROM mensalidades
+      JOIN matriculas ON mensalidades.matricula_id = matriculas.id
+      JOIN alunos ON matriculas.aluno_id = alunos.id
+      LEFT JOIN matriculas_turmas ON matriculas.id = matriculas_turmas.matricula_id
+      LEFT JOIN turmas ON matriculas_turmas.turma_id = turmas.id
+      WHERE mensalidades.id = $1
+      GROUP BY mensalidades.id, alunos.nome;
+    `;
+    const result = await pool.query(query, [req.params.id]);
+    
     const mensalidade = result.rows[0];
-
     if (mensalidade) {
       res.json(mensalidade);
     } else {

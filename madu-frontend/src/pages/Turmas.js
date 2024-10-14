@@ -1,4 +1,3 @@
-// src/pages/Turmas.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -29,7 +28,8 @@ const Turmas = () => {
 
   const columns = [
     { id: 'nome', label: 'Nome' },
-    { id: 'modalidade', label: 'Modalidade' },
+    { id: 'modalidade', label: 'Modalidade' },  // Modalidade (tipo de dança)
+    { id: 'tipo', label: 'Tipo' },  // Novo campo "tipo" (presencial ou online)
     { id: 'nivel', label: 'Nível' },
     { id: 'professor_nome', label: 'Professor' },
     { id: 'dias_da_semana', label: 'Dias da Semana' },

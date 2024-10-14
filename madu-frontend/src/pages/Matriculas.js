@@ -10,7 +10,15 @@ const Matriculas = () => {
 
   useEffect(() => {
     axios.get('http://localhost:5001/matriculas')
-      .then((response) => setMatriculas(response.data))
+      .then((response) => {
+        // Formata as datas de matrícula e vencimento antes de atualizar o estado
+        const formattedData = response.data.map(matricula => ({
+          ...matricula,
+          data_matricula: matricula.data_matricula ? new Date(matricula.data_matricula).toLocaleDateString('pt-BR') : '',
+          data_vencimento: matricula.data_vencimento ? new Date(matricula.data_vencimento).toLocaleDateString('pt-BR') : ''
+        }));
+        setMatriculas(formattedData);
+      })
       .catch((error) => console.error('Erro ao buscar matrículas:', error));
   }, []);
 
