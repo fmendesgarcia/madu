@@ -102,15 +102,15 @@ router.post('/', async (req, res) => {
     // Inserção da matrícula no banco
     const matriculaQuery = `
       INSERT INTO matriculas (aluno_id, data_matricula, status, mensalidade, valor_matricula, data_vencimento, data_final_contrato, desconto, isencao_taxa, bolsista)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      VALUES ($1, COALESCE($2, CURRENT_DATE), $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id;
     `;
     const matriculaValues = [
       aluno_id,
-      data_matricula || new Date(),
+      data_matricula, // A data_matricula será a atual se não for informada
       status || 'ativa',
-      mensalidade !== '' ? mensalidade : null,
-      valor_matricula !== '' ? valor_matricula : null,
+      mensalidade,
+      valor_matricula,
       data_vencimento,
       data_final_contrato,
       desconto || 0,
@@ -127,16 +127,13 @@ router.post('/', async (req, res) => {
 
     console.log('Matrícula criada com sucesso:', matriculaCriada);
 
-    // Associa a matrícula às turmas
+    // Associa a matrícula às turmas usando batch insert
     if (turmas_ids && turmas_ids.length > 0) {
       const matriculasTurmasQuery = `
         INSERT INTO matriculas_turmas (matricula_id, turma_id)
-        VALUES ($1, $2);
+        VALUES ${turmas_ids.map((_, i) => `($1, $${i + 2})`).join(', ')};
       `;
-
-      for (const turmaId of turmas_ids) {
-        await client.query(matriculasTurmasQuery, [matriculaCriada.id, turmaId]);
-      }
+      await client.query(matriculasTurmasQuery, [matriculaCriada.id, ...turmas_ids]);
     }
 
     await client.query('COMMIT'); // Finaliza a transação da criação da matrícula
@@ -166,7 +163,6 @@ router.post('/', async (req, res) => {
     client.release(); // Libera o cliente de conexão com o banco de dados
   }
 });
-
 
 
 
@@ -215,59 +211,76 @@ router.put('/:id', async (req, res) => {
 
     if (matriculaAtualizada) {
       // Apagar associações antigas com turmas
-      console.log("deletando no put");
       await client.query('DELETE FROM matriculas_turmas WHERE matricula_id = $1;', [req.params.id]);
 
-
-      console.log("inserindo em matriculas_turmas");
+      // Inserir novas associações em matriculas_turmas apenas se as turmas forem atualizadas
       if (turmas_ids && turmas_ids.length > 0) {
-        // Gerar placeholders dinâmicos: ($1, $2), ($3, $4), ...
         const placeholders = turmas_ids.map((_, index) => `($1, $${index + 2})`).join(', ');
         const matriculasTurmasQuery = `
           INSERT INTO matriculas_turmas (matricula_id, turma_id)
           VALUES ${placeholders};
         `;
         
-        // A primeira posição será sempre o 'matricula_id' repetido
         const values = [matriculaAtualizada.id, ...turmas_ids];
         await client.query(matriculasTurmasQuery, values);
       }
-      
-      console.log("inserido! em matriculas_turmas");
 
-
-      // Gera novas mensalidades após a matrícula ser atualizada
+      // Cancelar as mensalidades se o status da matrícula for "inativa"
       if (status === 'inativa') {
-        await cancelarMensalidadesFuturas(matriculaAtualizada.id);
-      } else {
-        await gerarMensalidades(matriculaAtualizada.id, mensalidade, data_vencimento, data_final_contrato, desconto, bolsista);
+        const cancelarMensalidadesQuery = `
+          UPDATE mensalidades
+          SET status = 'cancelada'
+          WHERE matricula_id = $1 AND status != 'cancelada';
+        `;
+        await client.query(cancelarMensalidadesQuery, [req.params.id]);
       }
 
+      // NÃO criar novas mensalidades em caso de atualizações de turma ou outros detalhes
+      // Isso evita a criação desnecessária de mensalidades ao atualizar dados
+      // Caso deseje adicionar novas mensalidades em outro contexto, deve-se criar uma lógica específica para isso.
+
+      // Finaliza a transação corretamente
       await client.query('COMMIT');
       res.json(matriculaAtualizada);
     } else {
+      // Desfaz a transação em caso de erro
       await client.query('ROLLBACK');
       res.status(404).json({ message: 'Matrícula não encontrada' });
     }
   } catch (error) {
-    await client.query('ROLLBACK');
+    await client.query('ROLLBACK'); // Finaliza a transação em caso de erro
     console.error('Erro ao atualizar matrícula:', error);
     res.status(400).json({ error: error.message });
   } finally {
-    client.release();
+    client.release(); // Libera o cliente de conexão
   }
 });
 
 
-// Rota para deletar uma matrícula
+
+
+
+// Rota para deletar uma matrícula e suas associações
 router.delete('/:id', async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // Primeiro, deletar as mensalidades associadas à matrícula
-    const deleteMensalidadesQuery = 'DELETE FROM mensalidades WHERE matricula_id = $1;';
-    await client.query(deleteMensalidadesQuery, [req.params.id]);
+    // Primeiro, cancelar ou deletar as mensalidades associadas à matrícula
+    const cancelarMensalidadesQuery = `
+      UPDATE mensalidades
+      SET status = 'cancelada'
+      WHERE matricula_id = $1 AND status != 'cancelada';
+    `;
+    await client.query(cancelarMensalidadesQuery, [req.params.id]);
+
+    // Atualiza os lançamentos associados às mensalidades canceladas (opcional)
+    const cancelarLancamentosQuery = `
+      UPDATE lancamentos
+      SET status = 'cancelado'
+      WHERE id IN (SELECT lancamento_id FROM mensalidades WHERE matricula_id = $1);
+    `;
+    await client.query(cancelarLancamentosQuery, [req.params.id]);
 
     // Depois, deletar as associações de turmas com a matrícula
     const deleteTurmasQuery = 'DELETE FROM matriculas_turmas WHERE matricula_id = $1;';
@@ -278,10 +291,10 @@ router.delete('/:id', async (req, res) => {
 
     if (result.rows.length > 0) {
       await client.query('COMMIT');
-      res.status(204).json({ message: 'Matrícula deletada' });
+      res.status(204).json({ message: 'Matrícula deletada com sucesso.' });
     } else {
       await client.query('ROLLBACK');
-      res.status(404).json({ message: 'Matrícula não encontrada' });
+      res.status(404).json({ message: 'Matrícula não encontrada.' });
     }
   } catch (error) {
     await client.query('ROLLBACK');
@@ -291,6 +304,7 @@ router.delete('/:id', async (req, res) => {
     client.release();
   }
 });
+
 
 // Rota para listar todas as matrículas
 router.get('/', async (req, res) => {
