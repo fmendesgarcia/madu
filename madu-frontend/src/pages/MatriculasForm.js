@@ -30,19 +30,18 @@ const MatriculaForm = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get('http://localhost:5001/alunos')
-      .then(response => setAlunos(response.data))
-      .catch(error => console.error('Erro ao buscar alunos:', error));
-
-    axios.get('http://localhost:5001/turmas')
-      .then(response => setTurmas(response.data))
-      .catch(error => console.error('Erro ao buscar turmas:', error));
-
-    if (id) {
-      axios.get(`http://localhost:5001/matriculas/${id}`)
-        .then(response => {
-          const matricula = response.data;
-
+    const fetchData = async () => {
+      try {
+        const alunosResponse = await axios.get('http://localhost:5001/alunos');
+        setAlunos(alunosResponse.data);
+  
+        const turmasResponse = await axios.get('http://localhost:5001/turmas');
+        setTurmas(turmasResponse.data);
+  
+        if (id) {
+          const matriculaResponse = await axios.get(`http://localhost:5001/matriculas/${id}`);
+          const matricula = matriculaResponse.data;
+  
           if (matricula.data_matricula) {
             matricula.data_matricula = new Date(matricula.data_matricula);
           }
@@ -52,21 +51,31 @@ const MatriculaForm = () => {
           if (matricula.data_final_contrato) {
             matricula.data_final_contrato = new Date(matricula.data_final_contrato);
           }
-
+  
           if (matricula.parcelasGeradas) {
             setParcelasGeradas(true);
           }
-
-          if (matricula.mensalidade || matricula.data_vencimento || matricula.data_final_contrato) {
-            matricula.gerarMensalidade = true;
+  
+          // Mapeia os nomes das turmas para os IDs correspondentes
+          if (matricula.turmas_nomes) {
+            const turmaIds = turmasResponse.data
+              .filter(turma => matricula.turmas_nomes.includes(turma.nome))
+              .map(turma => turma.id);
+  
+            matricula.turmas_ids = turmaIds;
           }
-
+  
           setForm({ ...matricula, turmas_ids: matricula.turmas_ids || [] });
-        })
-        .catch(error => console.error('Erro ao buscar matrícula:', error));
-    }
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+      }
+    };
+  
+    fetchData();
   }, [id]);
-
+  
+  
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm({
@@ -122,22 +131,23 @@ const MatriculaForm = () => {
       <FormSelect label="Aluno" name="aluno_id" value={form.aluno_id} onChange={handleChange} options={alunoOptions} required />
       {/* Substituindo FormSelect por Select para múltiplas turmas */}
       <FormControl fullWidth>
-        <InputLabel id="turmas-label">Turmas</InputLabel>
-        <Select
-          labelId="turmas-label"
-          id="turmas"
-          multiple
-          value={form.turmas_ids}
-          onChange={handleTurmaChange}
-          renderValue={(selected) => selected.map(turmaId => turmaOptions.find(turma => turma.value === turmaId).label).join(', ')} // Mostra os nomes das turmas selecionadas
-        >
-          {turmaOptions.map((turma) => (
-            <MenuItem key={turma.value} value={turma.value}>
-              {turma.label}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+      <InputLabel id="turmas-label">Turmas</InputLabel>
+      <Select
+        labelId="turmas-label"
+        id="turmas"
+        multiple
+        value={form.turmas_ids}
+        onChange={handleTurmaChange}
+        renderValue={(selected) => selected.map(turmaId => turmaOptions.find(turma => turma.value === turmaId)?.label || '').join(', ')} // Mostra os nomes das turmas selecionadas
+      >
+        {turmaOptions.map((turma) => (
+          <MenuItem key={turma.value} value={turma.value}>
+            {turma.label}
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+
 
       {/* Exibindo as turmas selecionadas */}
       {Array.isArray(form.turmas_ids) && form.turmas_ids.map(turmaId => (
@@ -178,13 +188,14 @@ const MatriculaForm = () => {
         control={
           <Checkbox
             name="gerarMensalidade"
-            checked={form.gerarMensalidade}
+            checked={form.gerarMensalidade !== undefined ? form.gerarMensalidade : false} // Certifique-se de que é booleano
             onChange={handleChange}
             disabled={parcelasGeradas} // Desabilitar o checkbox se as parcelas já foram geradas
           />
         }
         label="Gerar Mensalidade"
       />
+
 
       {form.gerarMensalidade && (
         <Box sx={{ border: '1px solid #ccc', padding: '16px', borderRadius: '8px' }}>
@@ -224,12 +235,13 @@ const MatriculaForm = () => {
         control={
           <Checkbox
             name="isencao_taxa"
-            checked={form.isencao_taxa}
+            checked={form.isencao_taxa !== undefined ? form.isencao_taxa : false} // Certifique-se de que é booleano
             onChange={handleChange}
           />
         }
         label="Isenção de Taxa"
       />
+
 
       <FormControlLabel
         control={

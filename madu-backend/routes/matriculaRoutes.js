@@ -176,11 +176,11 @@ router.put('/:id', async (req, res) => {
   try {
     const {
       aluno_id,
-      turmas_ids, // Ajustado para múltiplas turmas
+      turmas_ids,
       data_matricula,
       status,
       mensalidade,
-      valor_matricula, // Novo campo
+      valor_matricula,
       data_vencimento,
       data_final_contrato,
       desconto,
@@ -201,7 +201,7 @@ router.put('/:id', async (req, res) => {
       aluno_id,
       data_matricula,
       status,
-      mensalidade !== '' ? mensalidade : null,  // Verifique se mensalidade não está vazia
+      mensalidade !== '' ? mensalidade : null,
       valor_matricula !== '' ? valor_matricula : null,
       data_vencimento,
       data_final_contrato,
@@ -215,19 +215,26 @@ router.put('/:id', async (req, res) => {
 
     if (matriculaAtualizada) {
       // Apagar associações antigas com turmas
+      console.log("deletando no put");
       await client.query('DELETE FROM matriculas_turmas WHERE matricula_id = $1;', [req.params.id]);
 
-      // Associa novamente a matrícula às turmas
-      const matriculasTurmasQuery = `
-        INSERT INTO matriculas_turmas (matricula_id, turma_id)
-        VALUES ($1, $2);
-      `;
-      for (const turmaId of turmas_ids) {
-        await client.query(matriculasTurmasQuery, [matriculaAtualizada.id, turmaId]);
-      }
 
-      // Apagar mensalidades antigas associadas à matrícula
-      await client.query('DELETE FROM mensalidades WHERE matricula_id = $1;', [req.params.id]);
+      console.log("inserindo em matriculas_turmas");
+      if (turmas_ids && turmas_ids.length > 0) {
+        // Gerar placeholders dinâmicos: ($1, $2), ($3, $4), ...
+        const placeholders = turmas_ids.map((_, index) => `($1, $${index + 2})`).join(', ');
+        const matriculasTurmasQuery = `
+          INSERT INTO matriculas_turmas (matricula_id, turma_id)
+          VALUES ${placeholders};
+        `;
+        
+        // A primeira posição será sempre o 'matricula_id' repetido
+        const values = [matriculaAtualizada.id, ...turmas_ids];
+        await client.query(matriculasTurmasQuery, values);
+      }
+      
+      console.log("inserido! em matriculas_turmas");
+
 
       // Gera novas mensalidades após a matrícula ser atualizada
       if (status === 'inativa') {
@@ -250,6 +257,7 @@ router.put('/:id', async (req, res) => {
     client.release();
   }
 });
+
 
 // Rota para deletar uma matrícula
 router.delete('/:id', async (req, res) => {
@@ -288,12 +296,20 @@ router.delete('/:id', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT matriculas.*, alunos.nome AS aluno_nome
+      SELECT 
+        matriculas.*, 
+        alunos.nome AS aluno_nome,
+        STRING_AGG(turmas.nome, ', ') AS turmas_nomes -- Concatena os nomes das turmas associadas
       FROM matriculas
       LEFT JOIN alunos ON matriculas.aluno_id = alunos.id
+      LEFT JOIN matriculas_turmas ON matriculas.id = matriculas_turmas.matricula_id
+      LEFT JOIN turmas ON matriculas_turmas.turma_id = turmas.id
+      GROUP BY matriculas.id, alunos.nome
       ORDER BY matriculas.data_matricula ASC;
     `);
+
     res.json(result.rows); // Retorna a lista de matrículas
+    console.log(result.rows);
   } catch (error) {
     console.error('Erro ao listar matrículas:', error);
     res.status(500).json({ error: error.message });
@@ -322,6 +338,7 @@ GROUP BY matriculas.id, alunos.nome;
 
       matricula.parcelasGeradas = parcelasGeradas; // Adiciona o campo parcelasGeradas à resposta
       res.json(matricula);
+      console.log(matricula);
     } else {
       res.status(404).json({ message: 'Matrícula não encontrada' });
     }

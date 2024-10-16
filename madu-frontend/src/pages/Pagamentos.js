@@ -36,8 +36,8 @@ const Pagamentos = () => {
           {pagamentos.map((pagamento) => (
             <TableRow key={pagamento.id}>
               <TableCell>{pagamento.aluno_nome}</TableCell>
-              <TableCell>{pagamento.turma_nome}</TableCell>
-              <TableCell>{new Date(pagamento.data_pagamento).toLocaleDateString()}</TableCell> {/* Formatar a data */}
+              <TableCell>{pagamento.turmas_nomes}</TableCell>
+              <TableCell>{new Date(pagamento.data_pagamento).toLocaleDateString(('pt-BR'))}</TableCell> {/* Formatar a data */}
               <TableCell>{pagamento.valor_pago}</TableCell>
               <TableCell>{pagamento.forma_pagamento}</TableCell>
               <TableCell>

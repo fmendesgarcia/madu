@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../config/config'); // Conexão com PostgreSQL
 
 // Rota para criar um novo pagamento e atualizar a mensalidade
+// Rota para criar um novo pagamento e atualizar a mensalidade
 router.post('/', async (req, res) => {
   const client = await pool.connect(); // Usar um cliente específico para a transação
   try {
@@ -14,12 +15,13 @@ router.post('/', async (req, res) => {
 
     await client.query('BEGIN'); // Iniciar transação
 
-    // Obter aluno_id e turma_id a partir da mensalidade
+    // Obter aluno_id associado à mensalidade
     const mensalidadeQuery = `
-      SELECT matriculas.aluno_id, matriculas.turma_id 
+      SELECT matriculas.aluno_id
       FROM mensalidades
       JOIN matriculas ON mensalidades.matricula_id = matriculas.id
-      WHERE mensalidades.id = $1;
+      WHERE mensalidades.id = $1
+      GROUP BY matriculas.aluno_id;
     `;
     const mensalidadeResult = await client.query(mensalidadeQuery, [mensalidade_id]);
 
@@ -28,15 +30,15 @@ router.post('/', async (req, res) => {
       return res.status(404).json({ message: 'Mensalidade não encontrada' });
     }
 
-    const { aluno_id, turma_id } = mensalidadeResult.rows[0];
+    const { aluno_id } = mensalidadeResult.rows[0];
 
-    // Inserir o pagamento na tabela de pagamentos
+    // Inserir o pagamento na tabela de pagamentos (uma vez, independentemente de quantas turmas associadas)
     const pagamentoQuery = `
-      INSERT INTO pagamentos (aluno_id, turma_id, mensalidade_id, data_pagamento, valor_pago, forma_pagamento)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO pagamentos (aluno_id, mensalidade_id, data_pagamento, valor_pago, forma_pagamento)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *;
     `;
-    const pagamentoValues = [aluno_id, turma_id, mensalidade_id, data_pagamento, valor_pago, forma_pagamento];
+    const pagamentoValues = [aluno_id, mensalidade_id, data_pagamento, valor_pago, forma_pagamento];
     const pagamentoResult = await client.query(pagamentoQuery, pagamentoValues);
 
     // Atualizar o status da mensalidade para "pago" e definir a data de pagamento
@@ -57,10 +59,11 @@ router.post('/', async (req, res) => {
           SELECT lancamento_id FROM mensalidades WHERE id = $1
         );
       `;
-      await pool.query(lancamentoQuery, [mensalidade_id]);
+      await client.query(lancamentoQuery, [mensalidade_id]);
 
       await client.query('COMMIT'); // Confirmar transação se tudo deu certo
       res.status(201).json({
+        message: 'Pagamento registrado e mensalidade atualizada com sucesso.',
         pagamento: pagamentoResult.rows[0],
         mensalidadeAtualizada: mensalidadeAtualizada.rows[0],
       });
@@ -78,32 +81,48 @@ router.post('/', async (req, res) => {
 });
 
 
+
 // Rota para listar todos os pagamentos
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT pagamentos.*, alunos.nome AS aluno_nome, turmas.nome AS turma_nome
+      SELECT 
+        pagamentos.*, 
+        alunos.nome AS aluno_nome, 
+        STRING_AGG(turmas.nome, ', ') AS turmas_nomes
       FROM pagamentos
       LEFT JOIN alunos ON pagamentos.aluno_id = alunos.id
-      LEFT JOIN turmas ON pagamentos.turma_id = turmas.id
-      ORDER BY data_pagamento DESC;
+      LEFT JOIN mensalidades ON pagamentos.mensalidade_id = mensalidades.id
+      LEFT JOIN matriculas_turmas ON mensalidades.matricula_id = matriculas_turmas.matricula_id
+      LEFT JOIN turmas ON matriculas_turmas.turma_id = turmas.id
+      GROUP BY pagamentos.id, alunos.nome
+      ORDER BY pagamentos.mensalidade_id, pagamentos.created_at DESC;
     `);
     res.json(result.rows); // Retorna a lista de pagamentos
+    
   } catch (error) {
     console.error('Erro ao listar pagamentos:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
+
+// Rota para buscar um pagamento por ID
 // Rota para buscar um pagamento por ID
 router.get('/:id', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT pagamentos.*, alunos.nome AS aluno_nome, turmas.nome AS turma_nome
+      SELECT 
+        pagamentos.*, 
+        alunos.nome AS aluno_nome, 
+        STRING_AGG(turmas.nome, ', ') AS turmas_nomes
       FROM pagamentos
       LEFT JOIN alunos ON pagamentos.aluno_id = alunos.id
-      LEFT JOIN turmas ON pagamentos.turma_id = turmas.id
-      WHERE pagamentos.id = $1;
+      LEFT JOIN mensalidades ON pagamentos.mensalidade_id = mensalidades.id
+      LEFT JOIN matriculas_turmas ON mensalidades.matricula_id = matriculas_turmas.matricula_id
+      LEFT JOIN turmas ON matriculas_turmas.turma_id = turmas.id
+      WHERE pagamentos.id = $1
+      GROUP BY pagamentos.id, alunos.nome;
     `, [req.params.id]);
 
     const pagamento = result.rows[0];
@@ -119,19 +138,21 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+
+
 // Rota para atualizar um pagamento
 router.put('/:id', async (req, res) => {
   try {
-    const { aluno_id, turma_id, data_pagamento, valor_pago, forma_pagamento } = req.body;
+    const { aluno_id, data_pagamento, valor_pago, forma_pagamento } = req.body;
 
     const query = `
       UPDATE pagamentos
-      SET aluno_id = $1, turma_id = $2, data_pagamento = $3, valor_pago = $4, forma_pagamento = $5, updated_at = NOW()
-      WHERE id = $6
+      SET aluno_id = $1, data_pagamento = $2, valor_pago = $3, forma_pagamento = $4, updated_at = NOW()
+      WHERE id = $5
       RETURNING *;
     `;
 
-    const values = [aluno_id, turma_id, data_pagamento, valor_pago, forma_pagamento, req.params.id];
+    const values = [aluno_id, data_pagamento, valor_pago, forma_pagamento, req.params.id];
 
     const result = await pool.query(query, values);
     const pagamentoAtualizado = result.rows[0];
@@ -146,6 +167,7 @@ router.put('/:id', async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+
 
 // Rota para deletar um pagamento
 router.delete('/:id', async (req, res) => {

@@ -14,6 +14,8 @@ const Matriculas = () => {
         // Formata as datas de matrícula e vencimento antes de atualizar o estado
         const formattedData = response.data.map(matricula => ({
           ...matricula,
+          // Concatenar os nomes das turmas, caso haja múltiplas
+          // turmas_nomes: matricula.turmas_nomes ? matricula.turmas_nomes.join(', ') : '',
           data_matricula: matricula.data_matricula ? new Date(matricula.data_matricula).toLocaleDateString('pt-BR') : '',
           data_vencimento: matricula.data_vencimento ? new Date(matricula.data_vencimento).toLocaleDateString('pt-BR') : ''
         }));
@@ -24,7 +26,7 @@ const Matriculas = () => {
 
   const columns = [
     { id: 'aluno_nome', label: 'Aluno' },
-    { id: 'turma_nome', label: 'Turma' },
+    { id: 'turmas_nomes', label: 'Turmas' }, // Alterado para exibir os nomes das turmas
     { id: 'status', label: 'Status' },
     { id: 'mensalidade', label: 'Mensalidade' },
     { id: 'data_matricula', label: 'Data da Matrícula' },
