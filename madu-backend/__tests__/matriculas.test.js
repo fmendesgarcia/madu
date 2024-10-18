@@ -2,15 +2,16 @@ const request = require('supertest');
 const app = require('../server');  // Certifique-se de que o caminho para o servidor está correto
 const pool = require('../config/config'); // Certifique-se de importar o pool de conexão
 
-
 describe('Rotas de Matrículas', () => {
 
-  let matriculaId;  // Armazena o ID da matrícula para usar nos testes
+  let matriculaId;  // Armazena o ID da matrícula para usar nos testes0,066
   let alunoId;
   let turmaId1;
   let turmaId2;
   let professorId;
   let mensalidades; // Para armazenar as mensalidades geradas
+  let valorTurma1 = 150.00; // Definindo valores das turmas para teste
+  let valorTurma2 = 200.00; 
 
   // Insere um aluno, professor e duas turmas antes de cada teste
   beforeAll(async () => {
@@ -30,20 +31,20 @@ describe('Rotas de Matrículas', () => {
     `);
     professorId = professorRes.rows[0].id;
 
-    // Inserir primeira turma
+    // Inserir primeira turma com valor_hora
     const turmaRes1 = await pool.query(`
-      INSERT INTO turmas (nome, modalidade, nivel, professor_id, dias_da_semana, horario, max_alunos)
-      VALUES ('Turma Teste 1', 'Presencial', 'Iniciante', $1, 'Segunda, Quarta, Sexta', '18:00:00', 30)
+      INSERT INTO turmas (nome, modalidade, nivel, professor_id, dias_da_semana, horario, max_alunos, valor_hora)
+      VALUES ('Turma Teste 1', 'Presencial', 'Iniciante', $1, 'Segunda, Quarta, Sexta', '18:00:00', 30, $2)
       RETURNING id;
-    `, [professorId]);
+    `, [professorId, valorTurma1]);
     turmaId1 = turmaRes1.rows[0].id;
 
-    // Inserir segunda turma
+    // Inserir segunda turma com valor_hora
     const turmaRes2 = await pool.query(`
-      INSERT INTO turmas (nome, modalidade, nivel, professor_id, dias_da_semana, horario, max_alunos)
-      VALUES ('Turma Teste 2', 'Presencial', 'Intermediário', $1, 'Terça, Quinta', '19:00:00', 25)
+      INSERT INTO turmas (nome, modalidade, nivel, professor_id, dias_da_semana, horario, max_alunos, valor_hora)
+      VALUES ('Turma Teste 2', 'Presencial', 'Intermediário', $1, 'Terça, Quinta', '19:00:00', 25, $2)
       RETURNING id;
-    `, [professorId]);
+    `, [professorId, valorTurma2]);
     turmaId2 = turmaRes2.rows[0].id;
   });
 
@@ -62,7 +63,6 @@ describe('Rotas de Matrículas', () => {
         aluno_id: alunoId,
         turmas_ids: [turmaId1, turmaId2], // Inserindo a matrícula com duas turmas
         status: "ativa",
-        mensalidade: 500.00,
         data_vencimento: "2024-10-01",
         data_final_contrato: "2025-09-30",
         desconto: 50.00,
@@ -73,6 +73,10 @@ describe('Rotas de Matrículas', () => {
     expect(res.statusCode).toEqual(201);  // Verifica se o código de status é 201 (Created)
     expect(res.body).toHaveProperty('matricula.id');  // Verifica se a resposta contém o campo 'id'
     matriculaId = res.body.matricula.id;  // Armazena o ID da matrícula para usar em testes futuros
+
+    // Verificar se o valor da mensalidade foi calculado corretamente
+    const valorTotalEsperado = valorTurma1 + valorTurma2 - 50.00;  // Soma dos valores das turmas menos o desconto
+    expect(parseFloat(res.body.matricula.mensalidade)).toBe(valorTotalEsperado);  // Verifica o valor da mensalidade
 
     // Verificar as mensalidades geradas
     const mensalidadeRes = await pool.query(`
@@ -135,7 +139,6 @@ describe('Rotas de Matrículas', () => {
     console.log('Mensalidades depois da atualização:', mensalidadeDepois.rows); // Exibir mensalidades após a alteração
     expect(mensalidadeDepois.rows[0].status).toBe('cancelada');  // Verifica se as mensalidades foram canceladas com a matrícula inativa
   });
-
 
   // Teste para deletar uma matrícula
   it('deve deletar uma matrícula existente', async () => {

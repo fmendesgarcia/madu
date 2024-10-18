@@ -38,6 +38,7 @@ const TurmaForm = () => {
     dias_da_semana: [],
     horario: '',
     max_alunos: '',
+    valor_hora: '',
   });
 
   const [professores, setProfessores] = useState([]);
@@ -136,6 +137,18 @@ const TurmaForm = () => {
 
       <FormInput label="Horário" name="horario" value={form.horario} onChange={handleChange} type="time" required />
       <FormInput label="Máximo de Alunos" name="max_alunos" value={form.max_alunos} onChange={handleChange} type="number" required />
+
+      <FormInput 
+        label="Valor hora aula" 
+        name="valor_hora" 
+        value={form.valor_hora} 
+        onChange={handleChange} 
+        type="number" 
+        step="0.01"  // Permite até duas casas decimais
+        min="0"  // Impede valores negativos
+        required 
+      />
+
       
       <Button type="submit" variant="contained" color="primary">
         {id ? 'Atualizar' : 'Adicionar'}

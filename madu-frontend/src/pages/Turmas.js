@@ -35,6 +35,8 @@ const Turmas = () => {
     { id: 'dias_da_semana', label: 'Dias da Semana' },
     { id: 'horario', label: 'Horário' },
     { id: 'max_alunos', label: 'Máximo de Alunos' },
+    { id: 'valor_hora', label: 'Valor hora aula' },
+
   ];
 
   return (

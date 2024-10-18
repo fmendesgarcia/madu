@@ -30,11 +30,13 @@ describe('Rotas de Turmas', () => {
       .send({
         nome: "Turma de Ballet Avançado",
         modalidade: "Presencial",
+        tipo: "Grupo",
         nivel: "Avançado",
         professor_id: professorId,
-        dias_da_semana: "Segunda, Quarta, Sexta",
+        dias_da_semana: ["Segunda", "Quarta", "Sexta"],  // Mudança para array de strings
         horario: "18:00:00",
-        max_alunos: 20
+        max_alunos: 20,
+        valor_hora: 20.50,
       });
     
     expect(res.statusCode).toEqual(201);  // Verifica se o código de status é 201 (Created)
@@ -63,11 +65,13 @@ describe('Rotas de Turmas', () => {
       .send({
         nome: "Turma de Ballet Intermediário",
         modalidade: "Online",
+        tipo: "Aula Particular",  // Adiciona o campo tipo
         nivel: "Intermediário",
         professor_id: professorId,
-        dias_da_semana: "Terça, Quinta",
+        dias_da_semana: ["Terça", "Quinta"],  // Mudança para array de strings
         horario: "19:00:00",
-        max_alunos: 25
+        max_alunos: 25,
+        valor_hora: 30.75  // Atualizando o valor_hora
       });
     
     expect(res.statusCode).toEqual(200);  // Verifica se o status code é 200 (OK)

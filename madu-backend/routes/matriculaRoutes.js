@@ -88,7 +88,6 @@ router.post('/', async (req, res) => {
       turmas_ids, // Array de IDs das turmas
       data_matricula,
       status,
-      mensalidade,
       valor_matricula, // Novo campo
       data_vencimento,
       data_final_contrato,
@@ -99,33 +98,45 @@ router.post('/', async (req, res) => {
 
     await client.query('BEGIN'); // Inicia a transação
 
-    // Inserção da matrícula no banco
-    const matriculaQuery = `
-      INSERT INTO matriculas (aluno_id, data_matricula, status, mensalidade, valor_matricula, data_vencimento, data_final_contrato, desconto, isencao_taxa, bolsista)
-      VALUES ($1, COALESCE($2, CURRENT_DATE), $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING id;
-    `;
-    const matriculaValues = [
-      aluno_id,
-      data_matricula, // A data_matricula será a atual se não for informada
-      status || 'ativa',
-      mensalidade,
-      valor_matricula,
-      data_vencimento,
-      data_final_contrato,
-      desconto || 0,
-      isencao_taxa || false,
-      bolsista || false,
-    ];
+  // Recupera os valores das turmas selecionadas
+  const turmasQuery = `
+    SELECT valor_hora FROM turmas WHERE id = ANY($1::int[]);
+  `;
+  const turmasResult = await client.query(turmasQuery, [turmas_ids]);
 
-    const matriculaResult = await client.query(matriculaQuery, matriculaValues);
-    const matriculaCriada = matriculaResult.rows[0];
+  // Converta os valores de valor_hora para números corretamente e some-os
+  const valoresTurmas = turmasResult.rows.map(turma => parseFloat(turma.valor_hora));
+  const valorTotalMensalidade = valoresTurmas.reduce((acc, valor) => acc + valor, 0);
 
-    if (!matriculaCriada || !matriculaCriada.id) {
-      throw new Error('Erro ao criar matrícula, ID não gerado.');
-    }
+  // Aplique o desconto e verifique se o cálculo é válido
+  const mensalidadeFinal = valorTotalMensalidade - (desconto || 0);
+  if (isNaN(mensalidadeFinal)) {
+    throw new Error('Erro ao calcular a mensalidade: valor resultante é NaN');
+  }
 
-    console.log('Matrícula criada com sucesso:', matriculaCriada);
+  // Insira a matrícula no banco com o valor da mensalidade calculado corretamente
+  const matriculaQuery = `
+    INSERT INTO matriculas (aluno_id, data_matricula, status, mensalidade, valor_matricula, data_vencimento, data_final_contrato, desconto, isencao_taxa, bolsista)
+    VALUES ($1, COALESCE($2, CURRENT_DATE), $3, $4, $5, $6, $7, $8, $9, $10)
+    RETURNING id, mensalidade;
+  `;
+  const matriculaValues = [
+    aluno_id,
+    data_matricula, // A data_matricula será a atual se não for informada
+    status || 'ativa',
+    mensalidadeFinal, // Usamos o valor total das turmas menos o desconto como a mensalidade
+    valor_matricula,
+    data_vencimento,
+    data_final_contrato,
+    desconto || 0,
+    isencao_taxa || false,
+    bolsista || false,
+  ];
+
+  const matriculaResult = await client.query(matriculaQuery, matriculaValues);
+  const matriculaCriada = matriculaResult.rows[0];
+
+  console.log('Matrícula criada com sucesso:', matriculaCriada);
 
     // Associa a matrícula às turmas usando batch insert
     if (turmas_ids && turmas_ids.length > 0) {
@@ -139,10 +150,10 @@ router.post('/', async (req, res) => {
     await client.query('COMMIT'); // Finaliza a transação da criação da matrícula
 
     // Gera as mensalidades após a matrícula ter sido criada
-    if (mensalidade && data_vencimento && data_final_contrato) {
+    if (valorTotalMensalidade && data_vencimento && data_final_contrato) {
       await gerarMensalidades(
         matriculaCriada.id,
-        mensalidade,
+        valorTotalMensalidade,  // Passa o valor total das turmas como a mensalidade
         data_vencimento,
         data_final_contrato,
         desconto,
@@ -163,8 +174,6 @@ router.post('/', async (req, res) => {
     client.release(); // Libera o cliente de conexão com o banco de dados
   }
 });
-
-
 
 // Rota para atualizar uma matrícula e mensalidades
 router.put('/:id', async (req, res) => {

@@ -5,18 +5,18 @@ const pool = require('../config/config'); // Conexão com PostgreSQL
 // Rota para criar uma nova turma
 router.post('/', async (req, res) => {
   try {
-    const { nome, modalidade, tipo, nivel, professor_id, dias_da_semana, horario, max_alunos } = req.body;
+    const { nome, modalidade, tipo, nivel, professor_id, dias_da_semana, horario, max_alunos, valor_hora } = req.body;
 
     // Converter array de dias_da_semana em uma string separada por vírgulas
     const diasDaSemanaStr = dias_da_semana.join(',');
 
     const query = `
-      INSERT INTO turmas (nome, modalidade, tipo, nivel, professor_id, dias_da_semana, horario, max_alunos)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO turmas (nome, modalidade, tipo, nivel, professor_id, dias_da_semana, horario, max_alunos, valor_hora)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *;
     `;
     
-    const values = [nome, modalidade, tipo, nivel, professor_id, diasDaSemanaStr, horario, max_alunos];
+    const values = [nome, modalidade, tipo, nivel, professor_id, diasDaSemanaStr, horario, max_alunos, valor_hora];
     
     const result = await pool.query(query, values);
     res.status(201).json(result.rows[0]); // Retorna a turma criada
@@ -70,19 +70,22 @@ router.get('/:id', async (req, res) => {
 // Rota para atualizar uma turma
 router.put('/:id', async (req, res) => {
   try {
-    const { nome, modalidade, tipo, nivel, professor_id, dias_da_semana, horario, max_alunos } = req.body;
+    const { nome, modalidade, tipo, nivel, professor_id, dias_da_semana, horario, max_alunos, valor_hora } = req.body;
 
-    // Converter array de dias_da_semana em uma string separada por vírgulas
-    const diasDaSemanaStr = dias_da_semana.join(',');
+    // Verificar se dias_da_semana é um array e convertê-lo em string
+    const diasDaSemanaStr = Array.isArray(dias_da_semana) ? dias_da_semana.join(',') : null;
+
+    // Converter valor_hora para número, se necessário
+    const valorHoraFloat = parseFloat(valor_hora);
 
     const query = `
       UPDATE turmas
-      SET nome = $1, modalidade = $2, tipo = $3, nivel = $4, professor_id = $5, dias_da_semana = $6, horario = $7, max_alunos = $8, updated_at = NOW()
-      WHERE id = $9
+      SET nome = $1, modalidade = $2, tipo = $3, nivel = $4, professor_id = $5, dias_da_semana = $6, horario = $7, max_alunos = $8, valor_hora = $9, updated_at = NOW()
+      WHERE id = $10
       RETURNING *;
     `;
     
-    const values = [nome, modalidade, tipo, nivel, professor_id, diasDaSemanaStr, horario, max_alunos, req.params.id];
+    const values = [nome, modalidade, tipo, nivel, professor_id, diasDaSemanaStr, horario, max_alunos, valorHoraFloat, req.params.id];
     
     const result = await pool.query(query, values);
     const turmaAtualizada = result.rows[0];
@@ -97,6 +100,7 @@ router.put('/:id', async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+
 
 // Rota para deletar uma turma
 router.delete('/:id', async (req, res) => {
