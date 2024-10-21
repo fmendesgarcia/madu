@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Button, FormControlLabel, Checkbox, TextField, MenuItem, Select, InputLabel, FormControl, RadioGroup, Radio, FormLabel } from '@mui/material';
-import FormSelect from '../components/FormSelect';
+import FormInput from '../components/FormInput'; // Usando FormInput
+import FormSelect from '../components/FormSelect'; // Usando FormSelect
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { ptBR } from 'date-fns/locale';
@@ -12,20 +13,20 @@ const MatriculaForm = () => {
     aluno_id: '',
     turmas_ids: [], // Mudança para array para múltiplas turmas
     data_matricula: '',
-    status: 'ativa',
+    status: 'ativa', // Valor padrão ativo
     mensalidade: '',
     data_vencimento: '',
     data_final_contrato: '',
     desconto: '',
     isencao_taxa: false,
     bolsista: false,
-    gerarMensalidade: false,
     valor_matricula: '', // Novo campo
   });
 
   const [alunos, setAlunos] = useState([]);
   const [turmas, setTurmas] = useState([]);
   const [parcelasGeradas, setParcelasGeradas] = useState(false);
+  const [isInativoSalvo, setIsInativoSalvo] = useState(false); // Novo estado para controlar se o status "inativa" foi salvo
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -34,14 +35,14 @@ const MatriculaForm = () => {
       try {
         const alunosResponse = await axios.get('http://localhost:5001/alunos');
         setAlunos(alunosResponse.data);
-  
+
         const turmasResponse = await axios.get('http://localhost:5001/turmas');
         setTurmas(turmasResponse.data);
-  
+
         if (id) {
           const matriculaResponse = await axios.get(`http://localhost:5001/matriculas/${id}`);
           const matricula = matriculaResponse.data;
-  
+
           if (matricula.data_matricula) {
             matricula.data_matricula = new Date(matricula.data_matricula);
           }
@@ -51,31 +52,33 @@ const MatriculaForm = () => {
           if (matricula.data_final_contrato) {
             matricula.data_final_contrato = new Date(matricula.data_final_contrato);
           }
-  
+
           if (matricula.parcelasGeradas) {
             setParcelasGeradas(true);
           }
-  
-          // Mapeia os nomes das turmas para os IDs correspondentes
-          if (matricula.turmas_nomes) {
+
+          if (matricula.status === 'inativa') {
+            setIsInativoSalvo(true); // Define que o status "inativa" foi salvo anteriormente
+          }
+
+          if (turmasResponse.data && matricula.turmas_nomes) {
             const turmaIds = turmasResponse.data
-              .filter(turma => matricula.turmas_nomes.includes(turma.nome))
-              .map(turma => turma.id);
-  
+              .filter((turma) => matricula.turmas_nomes.includes(turma.nome))
+              .map((turma) => turma.id);
+
             matricula.turmas_ids = turmaIds;
           }
-  
+
           setForm({ ...matricula, turmas_ids: matricula.turmas_ids || [] });
         }
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
       }
     };
-  
+
     fetchData();
   }, [id]);
-  
-  
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm({
@@ -86,20 +89,36 @@ const MatriculaForm = () => {
 
   const handleTurmaChange = (event) => {
     const { value } = event.target;
-    setForm({
-      ...form,
-      turmas_ids: value, // Como o `Select` permite múltiplos, ele já retorna um array
-    });
-  };
-  
-  
 
-  const handleDateChange = (name, date) => {
-    setForm({
-      ...form,
-      [name]: date,
-    });
+    setForm((prevForm) => ({
+      ...prevForm,
+      turmas_ids: typeof value === 'string' ? value.split(',') : value, // Certificar que sempre é um array
+    }));
+
+    // Fetch para buscar os valores das turmas selecionadas e calcular a mensalidade total
+    if (value.length > 0) {
+      axios
+        .post('http://localhost:5001/turmas/valores', { turma_ids: value })
+        .then((response) => {
+          const { valores } = response.data;
+          const totalMensalidade = valores.reduce((acc, val) => acc + val, 0);
+          setForm((prevForm) => ({
+            ...prevForm,
+            mensalidade: totalMensalidade, // Atualiza o campo de mensalidade com o valor total
+          }));
+        });
+    } else {
+      setForm((prevForm) => ({ ...prevForm, mensalidade: 0 }));
+    }
   };
+
+const handleDateChange = (name) => (date) => {
+  setForm((prevForm) => ({
+    ...prevForm,
+    [name]: date,
+  }));
+};
+
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -112,149 +131,138 @@ const MatriculaForm = () => {
     };
 
     if (id) {
-      axios.put(`http://localhost:5001/matriculas/${id}`, formData)
-        .then(() => navigate('/matriculas'))
-        .catch(error => console.error('Erro ao atualizar matrícula:', error));
+      axios
+        .put(`http://localhost:5001/matriculas/${id}`, formData)
+        .then(() => {
+          if (formData.status === 'inativa') {
+            setIsInativoSalvo(true); // Define o status "inativa" como salvo
+          }
+          navigate('/matriculas');
+        })
+        .catch((error) => console.error('Erro ao atualizar matrícula:', error));
     } else {
-      axios.post('http://localhost:5001/matriculas', formData)
+      axios
+        .post('http://localhost:5001/matriculas', formData)
         .then(() => navigate('/matriculas'))
-        .catch(error => console.error('Erro ao adicionar matrícula:', error));
+        .catch((error) => console.error('Erro ao adicionar matrícula:', error));
     }
   };
 
-  const alunoOptions = alunos.map(aluno => ({ value: aluno.id, label: aluno.nome }));
-  const turmaOptions = turmas.map(turma => ({ value: turma.id, label: turma.nome }));
+  const alunoOptions = alunos.map((aluno) => ({ value: aluno.id, label: aluno.nome }));
+  const turmaOptions = turmas.map((turma) => ({ value: turma.id, label: turma.nome }));
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: '400px', margin: '0 auto' }}>
       <h2>{id ? 'Editar Matrícula' : 'Adicionar Matrícula'}</h2>
-      <FormSelect label="Aluno" name="aluno_id" value={form.aluno_id} onChange={handleChange} options={alunoOptions} required />
-      {/* Substituindo FormSelect por Select para múltiplas turmas */}
-      <FormControl fullWidth>
-      <InputLabel id="turmas-label">Turmas</InputLabel>
-      <Select
-        labelId="turmas-label"
-        id="turmas"
-        multiple
-        value={form.turmas_ids}
-        onChange={handleTurmaChange}
-        renderValue={(selected) => selected.map(turmaId => turmaOptions.find(turma => turma.value === turmaId)?.label || '').join(', ')} // Mostra os nomes das turmas selecionadas
-      >
-        {turmaOptions.map((turma) => (
-          <MenuItem key={turma.value} value={turma.value}>
-            {turma.label}
-          </MenuItem>
-        ))}
-      </Select>
-    </FormControl>
-
-
-      {/* Exibindo as turmas selecionadas */}
-      {Array.isArray(form.turmas_ids) && form.turmas_ids.map(turmaId => (
-        <div key={turmaId}>Turma selecionada: {turmaId}</div>
-      ))}
-      <DatePicker
-        selected={form.data_matricula}
-        onChange={date => handleDateChange('data_matricula', date)}
-        dateFormat="dd/MM/yyyy"
-        locale={ptBR}
-        customInput={<TextField label="Data da Matrícula" fullWidth required />}
-      />
-
-
-    <FormControl component="fieldset" required>
-      <FormLabel component="legend">Status</FormLabel>
-      <RadioGroup
-        aria-label="status"
-        name="status"
-        value={form.status}
+      <FormSelect
+        label="Aluno"
+        name="aluno_id"
+        value={form.aluno_id}
         onChange={handleChange}
-      >
-        <FormControlLabel value="ativa" control={<Radio />} label="Ativa" />
-        <FormControlLabel value="inativa" control={<Radio />} label="Inativa" />
-      </RadioGroup>
-    </FormControl>
-
-      <TextField 
-            label="Valor Matricula" 
-            name="valor_matricula" 
-            value={form.valor_matricula} 
-            onChange={handleChange} 
-            required 
-            disabled={parcelasGeradas} // Desabilitar se as parcelas já foram geradas
-          />
-      
-      <FormControlLabel
-        control={
-          <Checkbox
-            name="gerarMensalidade"
-            checked={form.gerarMensalidade !== undefined ? form.gerarMensalidade : false} // Certifique-se de que é booleano
-            onChange={handleChange}
-            disabled={parcelasGeradas} // Desabilitar o checkbox se as parcelas já foram geradas
-          />
-        }
-        label="Gerar Mensalidade"
+        options={alunoOptions}
+        required
+        disabled={isInativoSalvo} // Desabilita todos os campos se "inativa" foi salva
       />
 
-
-      {form.gerarMensalidade && (
-        <Box sx={{ border: '1px solid #ccc', padding: '16px', borderRadius: '8px' }}>
-          <TextField 
-            label="Mensalidade" 
-            name="mensalidade" 
-            value={form.mensalidade} 
-            onChange={handleChange} 
-            required 
-            disabled={parcelasGeradas} // Desabilitar se as parcelas já foram geradas
-          />
-          <DatePicker
-            selected={form.data_vencimento}
-            onChange={date => handleDateChange('data_vencimento', date)}
-            dateFormat="dd/MM/yyyy"
-            locale={ptBR}
-            customInput={<TextField label="Data de Vencimento" fullWidth required disabled={parcelasGeradas} />}
-          />
-          <DatePicker
-            selected={form.data_final_contrato}
-            onChange={date => handleDateChange('data_final_contrato', date)}
-            dateFormat="dd/MM/yyyy"
-            locale={ptBR}
-            customInput={<TextField label="Data Final do Contrato" fullWidth required disabled={parcelasGeradas} />}
-          />
-          <TextField 
-            label="Desconto" 
-            name="desconto" 
-            value={form.desconto} 
-            onChange={handleChange} 
-            disabled={parcelasGeradas} 
-          />
-        </Box>
+      {turmas.length > 0 ? (
+        <FormControl fullWidth>
+          <InputLabel id="turmas-label">Turmas</InputLabel>
+          <Select
+            labelId="turmas-label"
+            id="turmas"
+            multiple
+            value={form.turmas_ids}
+            onChange={handleTurmaChange}
+            renderValue={(selected) =>
+              selected
+                .map((turmaId) => turmaOptions.find((turma) => turma.value === turmaId)?.label || '')
+                .join(', ')
+            }
+            disabled={isInativoSalvo}
+          >
+            {turmaOptions.map((turma) => (
+              <MenuItem key={turma.value} value={turma.value}>
+                {turma.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      ) : (
+        <p>Carregando turmas...</p>
       )}
 
+      <DatePicker
+        selected={form.data_matricula}
+        onChange={(date) => handleDateChange('data_matricula', date)}
+        dateFormat="dd/MM/yyyy"
+        locale={ptBR}
+        customInput={<TextField label="Data da Matrícula" fullWidth required disabled={isInativoSalvo} />}
+      />
+
+      <FormControl component="fieldset" required>
+        <FormLabel component="legend">Status</FormLabel>
+        <RadioGroup aria-label="status" name="status" value={form.status} onChange={handleChange} disabled={isInativoSalvo}>
+          <FormControlLabel value="ativa" control={<Radio />} label="Ativa" />
+          <FormControlLabel value="inativa" control={<Radio />} label="Inativa" />
+        </RadioGroup>
+      </FormControl>
+
+      <FormInput
+        label="Valor Matricula"
+        name="valor_matricula"
+        value={form.valor_matricula}
+        onChange={handleChange}
+        required
+        disabled={parcelasGeradas || isInativoSalvo}
+      />
+
+      {/* Parte de geração de mensalidades */}
+      <Box sx={{ border: '1px solid #ccc', padding: '16px', borderRadius: '8px' }}>
+        <TextField
+          label="Mensalidade"
+          name="mensalidade"
+          value={form.mensalidade}
+          onChange={handleChange} // Permitir que o usuário altere
+          required
+          disabled={parcelasGeradas || isInativoSalvo}
+        />
+        <DatePicker
+          selected={form.data_vencimento}
+          onChange={(date) => handleDateChange('data_vencimento', date)}
+          dateFormat="dd/MM/yyyy"
+          locale={ptBR}
+          customInput={<TextField label="Data de Vencimento" fullWidth required disabled={parcelasGeradas || isInativoSalvo} />}
+        />
+        <DatePicker
+          selected={form.data_final_contrato}
+          onChange={(date) => handleDateChange('data_final_contrato', date)}
+          dateFormat="dd/MM/yyyy"
+          locale={ptBR}
+          customInput={<TextField label="Data Final do Contrato" fullWidth required disabled={parcelasGeradas || isInativoSalvo} />}
+        />
+        <TextField
+          label="Desconto"
+          name="desconto"
+          value={form.desconto}
+          onChange={handleChange}
+          disabled={parcelasGeradas || isInativoSalvo}
+        />
+      </Box>
+
       <FormControlLabel
-        control={
-          <Checkbox
-            name="isencao_taxa"
-            checked={form.isencao_taxa !== undefined ? form.isencao_taxa : false} // Certifique-se de que é booleano
-            onChange={handleChange}
-          />
-        }
+        control={<Checkbox name="isencao_taxa" checked={form.isencao_taxa} onChange={handleChange} />}
         label="Isenção de Taxa"
+        disabled={isInativoSalvo}
       />
-
-
       <FormControlLabel
-        control={
-          <Checkbox
-            name="bolsista"
-            checked={form.bolsista}
-            onChange={handleChange}
-          />
-        }
+        control={<Checkbox name="bolsista" checked={form.bolsista} onChange={handleChange} />}
         label="Bolsista"
+        disabled={isInativoSalvo}
       />
 
-      <Button type="submit" variant="contained" color="primary">{id ? 'Atualizar' : 'Adicionar'}</Button>
+      <Button type="submit" variant="contained" color="primary" disabled={isInativoSalvo}>
+        {id ? 'Atualizar' : 'Adicionar'}
+      </Button>
     </Box>
   );
 };

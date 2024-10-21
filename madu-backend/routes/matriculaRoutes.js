@@ -239,7 +239,7 @@ router.put('/:id', async (req, res) => {
         const cancelarMensalidadesQuery = `
           UPDATE mensalidades
           SET status = 'cancelada'
-          WHERE matricula_id = $1 AND status != 'cancelada';
+          WHERE matricula_id = $1 AND (status != 'cancelada' and status != 'pago');
         `;
         await client.query(cancelarMensalidadesQuery, [req.params.id]);
       }

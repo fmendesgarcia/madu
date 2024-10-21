@@ -118,4 +118,31 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// Rota para buscar os valores das turmas com base nos IDs
+router.post('/valores', async (req, res) => {
+  try {
+    const { turma_ids } = req.body;
+
+    if (!turma_ids || turma_ids.length === 0) {
+      return res.status(400).json({ message: 'Nenhuma turma selecionada' });
+    }
+
+    const query = `
+      SELECT valor_hora
+      FROM turmas
+      WHERE id = ANY($1::int[]);
+    `;
+
+    const result = await pool.query(query, [turma_ids]);
+
+    const valores = result.rows.map(row => parseFloat(row.valor_hora));
+    
+    res.json({ valores });
+  } catch (error) {
+    console.error('Erro ao buscar valores das turmas:', error);
+    res.status(500).json({ error: 'Erro ao buscar valores das turmas' });
+  }
+});
+
+
 module.exports = router;
