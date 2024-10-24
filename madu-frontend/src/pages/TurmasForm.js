@@ -1,31 +1,20 @@
-// src/pages/TurmaForm.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Box, Button, FormControlLabel, Checkbox } from '@mui/material';
+import { Box, Button } from '@mui/material';
 import FormInput from '../components/FormInput';
 import FormSelect from '../components/FormSelect';
 
-const diasDaSemanaOptions = [
-    { label: 'Segunda', value: 'Segunda' },
-    { label: 'Terça', value: 'Terça' },
-    { label: 'Quarta', value: 'Quarta' },
-    { label: 'Quinta', value: 'Quinta' },
-    { label: 'Sexta', value: 'Sexta' },
-    { label: 'Sábado', value: 'Sábado' },
-    { label: 'Domingo', value: 'Domingo' },
-];
-
 const modalidadeOptions = [
-    { value: 'Ballet', label: 'Ballet' },
-    { value: 'Jazz', label: 'Jazz' },
-    { value: 'Contemporâneo', label: 'Contemporâneo' },
-    { value: 'Hip Hop', label: 'Hip Hop' },
+  { value: 'Ballet', label: 'Ballet' },
+  { value: 'Jazz', label: 'Jazz' },
+  { value: 'Contemporâneo', label: 'Contemporâneo' },
+  { value: 'Hip Hop', label: 'Hip Hop' },
 ];
 
 const tipoOptions = [
-    { value: 'Presencial', label: 'Presencial' },
-    { value: 'Online', label: 'Online' },
+  { value: 'Presencial', label: 'Presencial' },
+  { value: 'Online', label: 'Online' },
 ];
 
 const TurmaForm = () => {
@@ -36,13 +25,12 @@ const TurmaForm = () => {
     nivel: '',
     professor_id: '',
     dias_da_semana: [],
-    horario: '',
     max_alunos: '',
     valor_hora: '',
   });
 
   const [professores, setProfessores] = useState([]);
-  const { id } = useParams();
+  const { id: turmaId } = useParams();  // Aqui pegamos o turmaId corretamente da URL
   const navigate = useNavigate();
 
   // Função para carregar dados ao editar
@@ -51,10 +39,12 @@ const TurmaForm = () => {
       .then((response) => setProfessores(response.data))
       .catch((error) => console.error('Erro ao buscar professores:', error));
 
-    if (id) {
-      axios.get(`http://localhost:5001/turmas/${id}`)
+    if (turmaId) {
+      axios.get(`http://localhost:5001/turmas/${turmaId}`)
         .then((response) => {
           const turma = response.data;
+
+          // Verificar se os dias_da_semana vêm como string e converter para array
           if (turma.dias_da_semana && typeof turma.dias_da_semana === 'string') {
             turma.dias_da_semana = turma.dias_da_semana.split(',');
           }
@@ -62,42 +52,47 @@ const TurmaForm = () => {
         })
         .catch((error) => console.error('Erro ao buscar turma:', error));
     }
-  }, [id]);
-
-  // Função para atualizar o estado ao marcar/desmarcar dias da semana
-  const handleCheckboxChange = (e) => {
-    const { value, checked } = e.target;
-    setForm((prevState) => ({
-      ...prevState,
-      dias_da_semana: checked
-        ? [...prevState.dias_da_semana, value]
-        : prevState.dias_da_semana.filter((dia) => dia !== value),
-    }));
-  };
+  }, [turmaId]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // Função para salvar a turma e redirecionar para configurar dias e horários
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (id) {
-      axios.put(`http://localhost:5001/turmas/${id}`, form)
-        .then(() => navigate('/turmas'))
+
+    if (turmaId) {
+      axios.put(`http://localhost:5001/turmas/${turmaId}`, form)
+        .then(() => navigate(`/turmas/${turmaId}/configurar-dias-horarios`))
         .catch((error) => console.error('Erro ao atualizar turma:', error));
     } else {
       axios.post('http://localhost:5001/turmas', form)
-        .then(() => navigate('/turmas'))
+        .then((response) => {
+          const newTurmaId = response.data.id; // Obtemos o ID da turma recém-criada
+          navigate(`/turmas/${newTurmaId}/configurar-dias-horarios`); // Redireciona para a tela de configuração de dias e horários
+        })
         .catch((error) => console.error('Erro ao criar turma:', error));
+    }
+
+    console.log("desgraça do id turma: " + turmaId)
+  };
+
+  // Função para redirecionar para a tela de incluir aulas e horários
+  const handleIncluirAulas = () => {
+    if (turmaId) {
+      navigate(`/turmas/${turmaId}/configurar-dias-horarios`);
+    } else {
+      alert('Você precisa salvar a turma antes de incluir aulas.');
     }
   };
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: '400px', margin: '0 auto' }}>
-      <h2>{id ? 'Editar Turma' : 'Adicionar Turma'}</h2>
+      <h2>{turmaId ? 'Editar Turma' : 'Adicionar Turma'}</h2>
       <FormInput label="Nome" name="nome" value={form.nome} onChange={handleChange} required />
       
-      {/* Campo para selecionar a Modalidade (tipo de dança) */}
+      {/* Campo para selecionar a Modalidade */}
       <FormSelect label="Modalidade" name="modalidade" value={form.modalidade} onChange={handleChange} options={modalidadeOptions} required />
       
       {/* Campo para selecionar o Tipo (Presencial ou Online) */}
@@ -117,27 +112,7 @@ const TurmaForm = () => {
         required
       />
 
-      {/* Checkboxes para Dias da Semana */}
-      <Box>
-        <label>Dias da Semana:</label>
-        {diasDaSemanaOptions.map((option) => (
-          <FormControlLabel
-            key={option.value}
-            control={
-              <Checkbox
-                value={option.value}
-                checked={form.dias_da_semana.includes(option.value)}
-                onChange={handleCheckboxChange}
-              />
-            }
-            label={option.label}
-          />
-        ))}
-      </Box>
-
-      <FormInput label="Horário" name="horario" value={form.horario} onChange={handleChange} type="time" required />
       <FormInput label="Máximo de Alunos" name="max_alunos" value={form.max_alunos} onChange={handleChange} type="number" required />
-
       <FormInput 
         label="Valor hora aula" 
         name="valor_hora" 
@@ -149,9 +124,15 @@ const TurmaForm = () => {
         required 
       />
 
-      
+      {/* Botão para incluir aulas e horários */}
+      {turmaId && (
+        <Button onClick={handleIncluirAulas} variant="outlined" color="secondary">
+          Incluir Aulas e Horários
+        </Button>
+      )}
+
       <Button type="submit" variant="contained" color="primary">
-        {id ? 'Atualizar' : 'Adicionar'}
+        {turmaId ? 'Atualizar' : 'Adicionar'}
       </Button>
     </Box>
   );

@@ -22,6 +22,7 @@ import Pagamentos from './pages/Pagamentos';
 import Dashboard from './pages/Dashboard';
 
 import GerenciarLancamentos from './pages/Lancamentos';
+import ConfigurarDiasHorarios from './pages/ConfigurarDiasHorarios';
 
 
 
@@ -84,6 +85,10 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
             {/* Outras rotas */}
+
+            <Route path="/turmas/:turmaId/configurar-dias-horarios" element={<ConfigurarDiasHorarios />} />
+
+            
 
 
 

@@ -5,58 +5,117 @@ const pool = require('../config/config'); // Conexão com PostgreSQL
 // Rota para criar uma nova turma
 router.post('/', async (req, res) => {
   try {
-    const { nome, modalidade, tipo, nivel, professor_id, dias_da_semana, horario, max_alunos, valor_hora } = req.body;
+    const { nome, modalidade, tipo, nivel, professor_id, max_alunos, valor_hora } = req.body;
 
-    // Converter array de dias_da_semana em uma string separada por vírgulas
-    const diasDaSemanaStr = dias_da_semana.join(',');
-
-    const query = `
-      INSERT INTO turmas (nome, modalidade, tipo, nivel, professor_id, dias_da_semana, horario, max_alunos, valor_hora)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    // Inserir a nova turma na tabela turmas
+    const queryTurma = `
+      INSERT INTO turmas (nome, modalidade, tipo, nivel, professor_id, max_alunos, valor_hora)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *;
     `;
     
-    const values = [nome, modalidade, tipo, nivel, professor_id, diasDaSemanaStr, horario, max_alunos, valor_hora];
-    
-    const result = await pool.query(query, values);
-    res.status(201).json(result.rows[0]); // Retorna a turma criada
+    const valuesTurma = [nome, modalidade, tipo, nivel, professor_id, max_alunos, valor_hora];
+    const resultTurma = await pool.query(queryTurma, valuesTurma);
+    const turmaCriada = resultTurma.rows[0];
+
+    res.status(201).json(turmaCriada); // Retorna a turma criada com ID
   } catch (error) {
     console.error('Erro ao criar turma:', error);
     res.status(400).json({ error: error.message });
   }
 });
 
-// Rota para listar todas as turmas
-router.get('/', async (req, res) => {
+router.post('/:turmaId/horarios', async (req, res) => {
+
+  console.log("entroiu nessa buceta")
   try {
-    const result = await pool.query(`
-      SELECT turmas.*, professores.nome AS professor_nome 
-      FROM turmas
-      LEFT JOIN professores ON turmas.professor_id = professores.id
-      ORDER BY turmas.nome ASC;
-    `);
-    res.json(result.rows); // Retorna a lista de turmas
+    const { horarios } = req.body;
+    const { turmaId } = req.params;
+
+    console.log('Horários recebidos:', horarios);
+    console.log('ID da turma recebida:', turmaId);
+
+    if (!turmaId) {
+      console.log('Erro: turmaId não foi passado.');
+      return res.status(400).json({ message: 'turmaId é obrigatório' });
+    }
+
+    if (!Array.isArray(horarios) || horarios.length === 0) {
+      console.log('Erro: Horários não foram enviados corretamente ou estão vazios.');
+      return res.status(400).json({ message: 'Horários são obrigatórios e devem ser um array' });
+    }
+
+    // Apagar os horários antigos da turma
+    await pool.query('DELETE FROM horarios_turma WHERE turma_id = $1;', [turmaId]);
+
+    const queryHorarios = `
+      INSERT INTO horarios_turma (turma_id, dia_da_semana, horario)
+      VALUES ($1, $2, $3);
+    `;
+
+    // Inserir os novos horários
+    for (const horario of horarios) {
+      console.log('Processando horário:', horario);
+      
+      if (!horario.dia_da_semana || !horario.horario) {
+        console.log('Erro: Faltando dados para o horário:', horario);
+        return res.status(400).json({ message: 'Todos os horários devem ter dia_da_semana e horário' });
+      }
+
+      // Log dos valores antes de executar a query
+      console.log(`Executando query com valores: turmaId = ${turmaId}, dia_da_semana = ${horario.dia_da_semana}, horario = ${horario.horario}`);
+
+      await pool.query(queryHorarios, [turmaId, horario.dia_da_semana, horario.horario]);
+
+      console.log(`Query executada com sucesso para turmaId ${turmaId} e horário: ${horario.dia_da_semana} - ${horario.horario}`);
+    }
+
+    // Verificar se os dados foram inseridos corretamente
+    const resultHorarios = await pool.query('SELECT * FROM horarios_turma WHERE turma_id = $1', [turmaId]);
+    console.log('Horários após inserção:', resultHorarios.rows);
+
+    res.status(200).json({ message: 'Horários atualizados com sucesso' });
   } catch (error) {
-    console.error('Erro ao listar turmas:', error);
+    console.error('Erro ao atualizar horários da turma:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+
+router.get('/', async (req, res) => {
+  console.log("entrou nessa buceta do caralho")
+  try {
+    const result = await pool.query('SELECT * FROM turmas');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erro ao buscar turmas:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Rota para buscar uma turma por ID
+
+// Rota para buscar uma turma por ID (incluindo horários)
 router.get('/:id', async (req, res) => {
   try {
-    const result = await pool.query(`
+    const queryTurma = `
       SELECT turmas.*, professores.nome AS professor_nome
       FROM turmas
       LEFT JOIN professores ON turmas.professor_id = professores.id
       WHERE turmas.id = $1;
-    `, [req.params.id]);
-
-    const turma = result.rows[0];
+    `;
+    const resultTurma = await pool.query(queryTurma, [req.params.id]);
+    const turma = resultTurma.rows[0];
 
     if (turma) {
-      // Converter a string de dias_da_semana de volta para um array
-      turma.dias_da_semana = turma.dias_da_semana.split(',');
+      // Carregar os horários dessa turma
+      const queryHorarios = `
+        SELECT dia_da_semana, horario
+        FROM horarios_turma
+        WHERE turma_id = $1;
+      `;
+      const resultHorarios = await pool.query(queryHorarios, [req.params.id]);
+      turma.horarios = resultHorarios.rows; // Adicionar os horários à resposta
+
       res.json(turma);
     } else {
       res.status(404).json({ message: 'Turma não encontrada' });
@@ -67,40 +126,64 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+
+router.get('/:turmaId/horarios', async (req, res) => {
+  try {
+    const { turmaId } = req.params;
+
+    if (!turmaId) {
+      return res.status(400).json({ message: 'turmaId é obrigatório' });
+    }
+
+    const result = await pool.query('SELECT dia_da_semana, horario FROM horarios_turma WHERE turma_id = $1', [turmaId]);
+
+    res.status(200).json(result.rows); // Retorna os horários salvos
+  } catch (error) {
+    console.error('Erro ao buscar horários da turma:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+
 // Rota para atualizar uma turma
 router.put('/:id', async (req, res) => {
   try {
-    const { nome, modalidade, tipo, nivel, professor_id, dias_da_semana, horario, max_alunos, valor_hora } = req.body;
+    const { nome, modalidade, tipo, nivel, professor_id, horarios, max_alunos, valor_hora } = req.body;
 
-    // Verificar se dias_da_semana é um array e convertê-lo em string
-    const diasDaSemanaStr = Array.isArray(dias_da_semana) ? dias_da_semana.join(',') : null;
-
-    // Converter valor_hora para número, se necessário
-    const valorHoraFloat = parseFloat(valor_hora);
-
-    const query = `
+    // Atualizar a tabela turmas
+    const queryTurma = `
       UPDATE turmas
-      SET nome = $1, modalidade = $2, tipo = $3, nivel = $4, professor_id = $5, dias_da_semana = $6, horario = $7, max_alunos = $8, valor_hora = $9, updated_at = NOW()
-      WHERE id = $10
+      SET nome = $1, modalidade = $2, tipo = $3, nivel = $4, professor_id = $5, max_alunos = $6, valor_hora = $7, updated_at = NOW()
+      WHERE id = $8
       RETURNING *;
     `;
     
-    const values = [nome, modalidade, tipo, nivel, professor_id, diasDaSemanaStr, horario, max_alunos, valorHoraFloat, req.params.id];
-    
-    const result = await pool.query(query, values);
-    const turmaAtualizada = result.rows[0];
+    const valuesTurma = [nome, modalidade, tipo, nivel, professor_id, max_alunos, parseFloat(valor_hora), req.params.id];
+    const resultTurma = await pool.query(queryTurma, valuesTurma);
+    const turmaAtualizada = resultTurma.rows[0];
 
-    if (turmaAtualizada) {
-      res.json(turmaAtualizada);
-    } else {
-      res.status(404).json({ message: 'Turma não encontrada' });
+    // Apagar os horários antigos
+    await pool.query('DELETE FROM horarios_turma WHERE turma_id = $1;', [req.params.id]);
+
+    // Inserir os novos horários
+    const queryHorarios = `
+      INSERT INTO horarios_turma (turma_id, dia_da_semana, horario)
+      VALUES ($1, $2, $3);
+    `;
+
+    if (Array.isArray(horarios) && horarios.length > 0) {
+      for (const horario of horarios) {
+        await pool.query(queryHorarios, [req.params.id, horario.dia_da_semana, horario.horario]);
+      }
     }
+    
+
+    res.json({ message: 'Turma e horários atualizados com sucesso', turma: turmaAtualizada });
   } catch (error) {
     console.error('Erro ao atualizar turma:', error);
     res.status(400).json({ error: error.message });
   }
 });
-
 
 // Rota para deletar uma turma
 router.delete('/:id', async (req, res) => {
@@ -143,6 +226,5 @@ router.post('/valores', async (req, res) => {
     res.status(500).json({ error: 'Erro ao buscar valores das turmas' });
   }
 });
-
 
 module.exports = router;
