@@ -59,23 +59,27 @@ const TurmaForm = () => {
   };
 
   // Função para salvar a turma e redirecionar para configurar dias e horários
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (turmaId) {
-      axios.put(`http://localhost:5001/turmas/${turmaId}`, form)
-        .then(() => navigate(`/turmas/${turmaId}/configurar-dias-horarios`))
-        .catch((error) => console.error('Erro ao atualizar turma:', error));
-    } else {
-      axios.post('http://localhost:5001/turmas', form)
-        .then((response) => {
-          const newTurmaId = response.data.id; // Obtemos o ID da turma recém-criada
-          navigate(`/turmas/${newTurmaId}/configurar-dias-horarios`); // Redireciona para a tela de configuração de dias e horários
-        })
-        .catch((error) => console.error('Erro ao criar turma:', error));
+    try {
+      let newTurmaId = turmaId;
+
+      if (turmaId) {
+        await axios.put(`http://localhost:5001/turmas/${turmaId}`, form);
+      } else {
+        const response = await axios.post('http://localhost:5001/turmas', form);
+        newTurmaId = response.data.id; // Obtemos o ID da turma recém-criada
+      }
+
+      if (newTurmaId) {
+        navigate(`/turmas/${newTurmaId}/configurar-dias-horarios`);
+      }
+    } catch (error) {
+      console.error('Erro ao salvar turma:', error);
     }
 
-    console.log("desgraça do id turma: " + turmaId)
+    console.log("ID da turma: " + turmaId);
   };
 
   // Função para redirecionar para a tela de incluir aulas e horários

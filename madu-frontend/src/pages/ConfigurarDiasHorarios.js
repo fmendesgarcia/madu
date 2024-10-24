@@ -30,6 +30,8 @@ const ConfigurarDiasHorarios = () => {
       axios.get(`http://localhost:5001/turmas/${turmaId}/horarios`)
         .then((response) => {
           const horariosSalvos = response.data;
+          console.log('Horários salvos:', horariosSalvos);  // Verifique se os dados chegam aqui
+          
           // Preencher os dias selecionados e horários com os dados vindos do backend
           const dias = horariosSalvos.map(horario => horario.dia_da_semana);
           setDiasSelecionados([...new Set(dias)]); // Elimina dias duplicados
@@ -39,9 +41,10 @@ const ConfigurarDiasHorarios = () => {
             if (!horariosMap[horario.dia_da_semana]) {
               horariosMap[horario.dia_da_semana] = [];
             }
-            horariosMap[horario.dia_da_semana].push(horario.horario);
+            horariosMap[horario.dia_da_semana].push(horario.horario.slice(0, 5)); // Remove segundos ao exibir
           });
 
+          console.log('Horários mapeados:', horariosMap);  // Verifique se os horários estão sendo mapeados corretamente
           setHorarios(horariosMap);
         })
         .catch((error) => {
@@ -102,8 +105,9 @@ const ConfigurarDiasHorarios = () => {
       return;
     }
 
+    // Filtra horários vazios e formata para o envio
     const horariosFormatados = diasSelecionados.flatMap((dia) =>
-      (horarios[dia] || []).map((horario) => ({
+      (horarios[dia] || []).filter((horario) => horario.trim() !== '').map((horario) => ({
         dia_da_semana: dia,
         horario,
       }))
