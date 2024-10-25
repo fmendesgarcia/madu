@@ -198,6 +198,10 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+
+
+
+
 // Rota para deletar uma turma (opcionalmente lidando com as aulas associadas)
 router.delete('/:id', async (req, res) => {
   try {

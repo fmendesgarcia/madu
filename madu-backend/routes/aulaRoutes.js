@@ -5,15 +5,15 @@ const pool = require('../config/config'); // Conexão com PostgreSQL
 // Rota para criar uma nova aula
 router.post('/', async (req, res) => {
   try {
-    const { turma_id, data, horario, duracao } = req.body;
+    const { turma_id, start, end_time } = req.body;
     
     const query = `
-      INSERT INTO aulas (turma_id, data, horario, duracao)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO aulas (turma_id, start, end_time)
+      VALUES ($1, $2, $3)
       RETURNING *;
     `;
     
-    const values = [turma_id, data, horario, duracao];
+    const values = [turma_id, start, end_time];
     
     const result = await pool.query(query, values);
     res.status(201).json(result.rows[0]); // Retorna a aula criada
@@ -30,7 +30,7 @@ router.get('/', async (req, res) => {
       SELECT aulas.*, turmas.nome AS turma_nome
       FROM aulas
       LEFT JOIN turmas ON aulas.turma_id = turmas.id
-      ORDER BY aulas.data ASC, aulas.horario ASC;
+      ORDER BY aulas.start ASC;  
     `);
     res.json(result.rows); // Retorna a lista de aulas
   } catch (error) {
@@ -65,16 +65,16 @@ router.get('/:id', async (req, res) => {
 // Rota para atualizar uma aula
 router.put('/:id', async (req, res) => {
   try {
-    const { turma_id, data, horario, duracao } = req.body;
+    const { turma_id, start, end_time } = req.body;
     
     const query = `
       UPDATE aulas
-      SET turma_id = $1, data = $2, horario = $3, duracao = $4, updated_at = NOW()
-      WHERE id = $5
+      SET turma_id = $1, start = $2, end_time = $3, updated_at = NOW()
+      WHERE id = $4
       RETURNING *;
     `;
     
-    const values = [turma_id, data, horario, duracao, req.params.id];
+    const values = [turma_id, start, end_time, req.params.id];
     
     const result = await pool.query(query, values);
     const aulaAtualizada = result.rows[0];
@@ -107,12 +107,3 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
-
-// curl -X POST http://localhost:5000/aulas \
-// -H 'Content-Type: application/json' \
-// -d '{
-//   "turma_id": 1,
-//   "data": "2024-09-25",
-//   "horario": "18:00:00",
-//   "duracao": 60
-// }'
