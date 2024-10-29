@@ -62,33 +62,42 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Rota para atualizar uma aula
+// Atualiza os horários de uma aula específica
 router.put('/:id', async (req, res) => {
+  const { start, end_time } = req.body;
+  const id = req.params.id;
+
+
+  console.log('ID da aula:', id);
+  console.log('Start:', start);
+  console.log('End Time:', end_time);
+
+
+  if (!id) {
+    return res.status(400).json({ error: 'ID da aula não fornecido' });
+  }
+
   try {
-    const { turma_id, start, end_time } = req.body;
-    
     const query = `
       UPDATE aulas
-      SET turma_id = $1, start = $2, end_time = $3, updated_at = NOW()
-      WHERE id = $4
+      SET start = $1, end_time = $2
+      WHERE id = $3
       RETURNING *;
     `;
-    
-    const values = [turma_id, start, end_time, req.params.id];
-    
+    const values = [start, end_time, id];
     const result = await pool.query(query, values);
-    const aulaAtualizada = result.rows[0];
-    
-    if (aulaAtualizada) {
-      res.json(aulaAtualizada);
-    } else {
-      res.status(404).json({ message: 'Aula não encontrada' });
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Aula não encontrada' });
     }
+
+    res.json(result.rows[0]);
   } catch (error) {
     console.error('Erro ao atualizar aula:', error);
-    res.status(400).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
+
 
 // Rota para deletar uma aula
 router.delete('/:id', async (req, res) => {
