@@ -13,20 +13,23 @@ const CalendarView = () => {
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
 
-  useEffect(() => {
+  const fetchEvents = () => {
     axios.get('http://localhost:5001/aulas')
       .then((response) => {
         const aulas = response.data.map(aula => ({
           id: aula.id,
           title: aula.title,
-          start: moment.tz(aula.start, 'America/Sao_Paulo').format(), // Converte para string ISO com fuso horário fixo
+          start: moment.tz(aula.start, 'America/Sao_Paulo').format(),
           end: moment.tz(aula.end_time, 'America/Sao_Paulo').format()
         }));
         setEvents(aulas);
       })
       .catch((error) => console.error('Erro ao carregar aulas:', error));
+  };
+
+  useEffect(() => {
+    fetchEvents();
   }, []);
-  
 
   const handleEventClick = (clickInfo) => {
     setSelectedEvent(clickInfo.event);
@@ -34,63 +37,52 @@ const CalendarView = () => {
     setNewTime(moment.tz(clickInfo.event.start, 'America/Sao_Paulo').format('HH:mm'));
     setShowModal(true);
   };
-  
 
   const handleSaveChanges = () => {
-    // Define horários no fuso correto e em formato de string
     const updatedStart = moment.tz(`${newDate}T${newTime}:00`, 'America/Sao_Paulo').format('YYYY-MM-DD HH:mm:ss');
     const updatedEnd = moment.tz(`${newDate}T${newTime}:00`, 'America/Sao_Paulo').add(1, 'hour').format('YYYY-MM-DD HH:mm:ss');
-  
+
     axios.put(`http://localhost:5001/aulas/${selectedEvent.id}`, {
       start: updatedStart,
       end_time: updatedEnd
     })
     .then((response) => {
-      setEvents(events.map(event => 
-        event.id === selectedEvent.id 
-          ? { ...event, start: updatedStart, end: updatedEnd } // Atualiza como string no estado
-          : event
-      ));
       setShowModal(false);
       setSelectedEvent(null);
+      fetchEvents(); // Recarrega os eventos da API para garantir que o calendário seja atualizado
     })
     .catch((error) => console.error('Erro ao atualizar aula:', error));
   };
-  
-  
-  
+
   const handleEventDrop = (info) => {
     const updatedEvent = {
       id: info.event.id,
       start: moment.tz(info.event.start, 'America/Sao_Paulo').format('YYYY-MM-DD HH:mm:ss'),
       end: moment.tz(new Date(info.event.start.getTime() + 60 * 60 * 1000), 'America/Sao_Paulo').format('YYYY-MM-DD HH:mm:ss')
     };
-  
+
     axios.put(`http://localhost:5001/aulas/${updatedEvent.id}`, {
       start: updatedEvent.start,
       end_time: updatedEvent.end
     })
     .then((response) => {
-      setEvents(events.map(event => 
-        event.id === updatedEvent.id ? { ...event, start: updatedEvent.start, end: updatedEvent.end } : event
-      ));
+      fetchEvents(); // Recarrega os eventos após mover
     })
     .catch((error) => console.error('Erro ao mover a aula:', error));
   };
 
   return (
     <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
-    <FullCalendar
-      plugins={[dayGridPlugin, interactionPlugin]}
-      initialView="dayGridMonth"
-      events={events}
-      editable={true}
-      eventClick={handleEventClick}
-      eventDrop={handleEventDrop}
-      timeZone="local"
-      displayEventTime={true} // Garante que o horário seja exibido
-    />
-
+      <FullCalendar
+        plugins={[dayGridPlugin, interactionPlugin]}
+        initialView="dayGridMonth"
+        events={events}
+        editable={true}
+        eventClick={handleEventClick}
+        eventDrop={handleEventDrop}
+        timeZone="local"
+        displayEventTime={true}
+      />
 
       {/* Modal de Edição usando Material-UI */}
       <Dialog open={showModal} onClose={() => setShowModal(false)}>
