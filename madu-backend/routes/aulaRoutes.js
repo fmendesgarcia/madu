@@ -67,11 +67,9 @@ router.put('/:id', async (req, res) => {
   const { start, end_time } = req.body;
   const id = req.params.id;
 
-
   console.log('ID da aula:', id);
-  console.log('Start:', start);
-  console.log('End Time:', end_time);
-
+  console.log('Start recebido:', start);  // Verifique se o horário está correto (sem sufixo `Z`)
+  console.log('End Time recebido:', end_time);
 
   if (!id) {
     return res.status(400).json({ error: 'ID da aula não fornecido' });
@@ -84,6 +82,7 @@ router.put('/:id', async (req, res) => {
       WHERE id = $3
       RETURNING *;
     `;
+    // Passe diretamente como strings
     const values = [start, end_time, id];
     const result = await pool.query(query, values);
 
@@ -97,6 +96,8 @@ router.put('/:id', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+
 
 
 // Rota para deletar uma aula

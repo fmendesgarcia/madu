@@ -4,6 +4,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import axios from 'axios';
 import { Dialog, DialogActions, DialogContent, DialogTitle, Button, TextField } from '@mui/material';
+import moment from 'moment-timezone';
 
 const CalendarView = () => {
   const [events, setEvents] = useState([]);
@@ -18,49 +19,56 @@ const CalendarView = () => {
         const aulas = response.data.map(aula => ({
           id: aula.id,
           title: aula.title,
-          start: new Date(aula.start),
-          end: new Date(aula.end_time)
+          start: moment.tz(aula.start, 'America/Sao_Paulo').format(), // Converte para string ISO com fuso horário fixo
+          end: moment.tz(aula.end_time, 'America/Sao_Paulo').format()
         }));
         setEvents(aulas);
       })
       .catch((error) => console.error('Erro ao carregar aulas:', error));
   }, []);
+  
 
   const handleEventClick = (clickInfo) => {
     setSelectedEvent(clickInfo.event);
-    setNewDate(clickInfo.event.startStr.split('T')[0]);
-    setNewTime(clickInfo.event.startStr.split('T')[1].slice(0, 5));
+    setNewDate(moment.tz(clickInfo.event.start, 'America/Sao_Paulo').format('YYYY-MM-DD'));
+    setNewTime(moment.tz(clickInfo.event.start, 'America/Sao_Paulo').format('HH:mm'));
     setShowModal(true);
   };
+  
 
   const handleSaveChanges = () => {
-    const updatedStart = new Date(`${newDate}T${newTime}:00`);
-    const updatedEnd = new Date(updatedStart.getTime() + 60 * 60 * 1000); // 1 hora depois
-
+    // Define horários no fuso correto e em formato de string
+    const updatedStart = moment.tz(`${newDate}T${newTime}:00`, 'America/Sao_Paulo').format('YYYY-MM-DD HH:mm:ss');
+    const updatedEnd = moment.tz(`${newDate}T${newTime}:00`, 'America/Sao_Paulo').add(1, 'hour').format('YYYY-MM-DD HH:mm:ss');
+  
     axios.put(`http://localhost:5001/aulas/${selectedEvent.id}`, {
-      start: updatedStart.toISOString(),
-      end_time: updatedEnd.toISOString()
+      start: updatedStart,
+      end_time: updatedEnd
     })
     .then((response) => {
       setEvents(events.map(event => 
-        event.id === selectedEvent.id ? { ...event, start: updatedStart, end: updatedEnd } : event
+        event.id === selectedEvent.id 
+          ? { ...event, start: updatedStart, end: updatedEnd } // Atualiza como string no estado
+          : event
       ));
       setShowModal(false);
       setSelectedEvent(null);
     })
     .catch((error) => console.error('Erro ao atualizar aula:', error));
   };
-
+  
+  
+  
   const handleEventDrop = (info) => {
     const updatedEvent = {
       id: info.event.id,
-      start: info.event.start,
-      end: new Date(info.event.start.getTime() + 60 * 60 * 1000)
+      start: moment.tz(info.event.start, 'America/Sao_Paulo').format('YYYY-MM-DD HH:mm:ss'),
+      end: moment.tz(new Date(info.event.start.getTime() + 60 * 60 * 1000), 'America/Sao_Paulo').format('YYYY-MM-DD HH:mm:ss')
     };
-
+  
     axios.put(`http://localhost:5001/aulas/${updatedEvent.id}`, {
-      start: updatedEvent.start.toISOString(),
-      end_time: updatedEvent.end.toISOString()
+      start: updatedEvent.start,
+      end_time: updatedEvent.end
     })
     .then((response) => {
       setEvents(events.map(event => 
@@ -72,14 +80,17 @@ const CalendarView = () => {
 
   return (
     <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
-      <FullCalendar
-        plugins={[dayGridPlugin, interactionPlugin]}
-        initialView="dayGridMonth"
-        events={events}
-        editable={true}
-        eventClick={handleEventClick}
-        eventDrop={handleEventDrop}
-      />
+    <FullCalendar
+      plugins={[dayGridPlugin, interactionPlugin]}
+      initialView="dayGridMonth"
+      events={events}
+      editable={true}
+      eventClick={handleEventClick}
+      eventDrop={handleEventDrop}
+      timeZone="local"
+      displayEventTime={true} // Garante que o horário seja exibido
+    />
+
 
       {/* Modal de Edição usando Material-UI */}
       <Dialog open={showModal} onClose={() => setShowModal(false)}>
