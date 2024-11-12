@@ -112,12 +112,12 @@ const MatriculaForm = () => {
     }
   };
 
-const handleDateChange = (name) => (date) => {
-  setForm((prevForm) => ({
-    ...prevForm,
-    [name]: date,
-  }));
-};
+  const handleDateChange = (name, date) => { // Agora 'name' é um argumento explícito
+    setForm((prevForm) => ({
+      ...prevForm,
+      [name]: date, // Atualiza o campo específico usando o valor de 'name'
+    }));
+  };
 
 
   const handleSubmit = (e) => {

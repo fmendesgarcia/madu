@@ -1,14 +1,16 @@
+// CalendarView.jsx
 import React, { useState, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import axios from 'axios';
-import { Dialog, DialogActions, DialogContent, DialogTitle, Button, TextField } from '@mui/material';
 import moment from 'moment-timezone';
+import AulaModal from './AulaModal';
 
 const CalendarView = () => {
   const [events, setEvents] = useState([]);
-  const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showPresenceModal, setShowPresenceModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
@@ -35,7 +37,17 @@ const CalendarView = () => {
     setSelectedEvent(clickInfo.event);
     setNewDate(moment.tz(clickInfo.event.start, 'America/Sao_Paulo').format('YYYY-MM-DD'));
     setNewTime(moment.tz(clickInfo.event.start, 'America/Sao_Paulo').format('HH:mm'));
-    setShowModal(true);
+    setShowEditModal(true);
+  };
+
+  const handleOpenPresenceList = () => {
+    setShowEditModal(false);
+    setShowPresenceModal(true);
+  };
+
+  const handleClosePresenceModal = () => {
+    setShowPresenceModal(false);
+    setShowEditModal(true);
   };
 
   const handleSaveChanges = () => {
@@ -46,29 +58,12 @@ const CalendarView = () => {
       start: updatedStart,
       end_time: updatedEnd
     })
-    .then((response) => {
-      setShowModal(false);
+    .then(() => {
+      setShowEditModal(false);
       setSelectedEvent(null);
-      fetchEvents(); // Recarrega os eventos da API para garantir que o calendário seja atualizado
+      fetchEvents();
     })
     .catch((error) => console.error('Erro ao atualizar aula:', error));
-  };
-
-  const handleEventDrop = (info) => {
-    const updatedEvent = {
-      id: info.event.id,
-      start: moment.tz(info.event.start, 'America/Sao_Paulo').format('YYYY-MM-DD HH:mm:ss'),
-      end: moment.tz(new Date(info.event.start.getTime() + 60 * 60 * 1000), 'America/Sao_Paulo').format('YYYY-MM-DD HH:mm:ss')
-    };
-
-    axios.put(`http://localhost:5001/aulas/${updatedEvent.id}`, {
-      start: updatedEvent.start,
-      end_time: updatedEvent.end
-    })
-    .then((response) => {
-      fetchEvents(); // Recarrega os eventos após mover
-    })
-    .catch((error) => console.error('Erro ao mover a aula:', error));
   };
 
   return (
@@ -79,47 +74,34 @@ const CalendarView = () => {
         events={events}
         editable={true}
         eventClick={handleEventClick}
-        eventDrop={handleEventDrop}
-        timeZone="local"
-        displayEventTime={true}
+        eventDrop={(info) => {
+          const updatedEvent = {
+            id: info.event.id,
+            start: moment.tz(info.event.start, 'America/Sao_Paulo').format('YYYY-MM-DD HH:mm:ss'),
+            end: moment.tz(new Date(info.event.start.getTime() + 60 * 60 * 1000), 'America/Sao_Paulo').format('YYYY-MM-DD HH:mm:ss')
+          };
+          axios.put(`http://localhost:5001/aulas/${updatedEvent.id}`, {
+            start: updatedEvent.start,
+            end_time: updatedEvent.end
+          })
+          .then(() => fetchEvents())
+          .catch((error) => console.error('Erro ao mover a aula:', error));
+        }}
       />
 
-      {/* Modal de Edição usando Material-UI */}
-      <Dialog open={showModal} onClose={() => setShowModal(false)}>
-        <DialogTitle>Editar Aula</DialogTitle>
-        <DialogContent>
-          <TextField
-            label="Data"
-            type="date"
-            fullWidth
-            value={newDate}
-            onChange={(e) => setNewDate(e.target.value)}
-            InputLabelProps={{
-              shrink: true,
-            }}
-            style={{ marginBottom: '10px' }}
-          />
-          <TextField
-            label="Horário"
-            type="time"
-            fullWidth
-            value={newTime}
-            onChange={(e) => setNewTime(e.target.value)}
-            InputLabelProps={{
-              shrink: true,
-            }}
-            style={{ marginBottom: '10px' }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowModal(false)} color="secondary">
-            Cancelar
-          </Button>
-          <Button onClick={handleSaveChanges} color="primary" variant="contained">
-            Salvar Alterações
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Chama o componente AulaModal e passa as props */}
+      <AulaModal
+        showEditModal={showEditModal}
+        showPresenceModal={showPresenceModal}
+        onClose={() => setShowEditModal(false)}
+        onSaveChanges={handleSaveChanges}
+        onOpenPresenceList={handleOpenPresenceList}
+        onClosePresenceList={handleClosePresenceModal}
+        newDate={newDate}
+        newTime={newTime}
+        setNewDate={setNewDate}
+        setNewTime={setNewTime}
+      />
     </div>
   );
 };

@@ -12,6 +12,8 @@ import TurmaForm from './pages/TurmasForm';
 
 import Aulas from './pages/Aulas';
 import AulaForm from './pages/AulasForm';
+import AulaModal from './components/AulaModal';
+
 
 import Matriculas from './pages/Matriculas';
 import MatriculaForm from './pages/MatriculasForm';
@@ -87,6 +89,8 @@ function App() {
             {/* Outras rotas */}
 
             <Route path="/turmas/:turmaId/configurar-dias-horarios" element={<ConfigurarDiasHorarios />} />
+
+            {/* <AulaModal />  Aqui você chama o componente */}
 
             
 
