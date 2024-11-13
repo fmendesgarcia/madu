@@ -108,6 +108,42 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+
+// Rota para listar os alunos e suas presenças em uma aula específica
+router.get('/aulas/:aula_id/presencas', async (req, res) => {
+  try {
+    const { aula_id } = req.params;
+
+    const query = `
+      SELECT 
+          a.id AS aluno_id,
+          a.nome AS aluno_nome,
+          a.cpf AS aluno_cpf,
+          COALESCE(p.presente, false) AS presente
+      FROM 
+          public.alunos a
+      JOIN 
+          public.matriculas m ON m.aluno_id = a.id
+      JOIN 
+          public.matriculas_turmas mt ON mt.matricula_id = m.id
+      JOIN 
+          public.aulas au ON au.turma_id = mt.turma_id
+      LEFT JOIN 
+          public.presencas p ON p.aluno_id = a.id AND p.aula_id = au.id
+      WHERE 
+          au.id = $1;
+    `;
+
+    const values = [aula_id];
+    const result = await pool.query(query, values);
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erro ao listar presenças da aula:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
 
 

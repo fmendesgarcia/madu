@@ -27,22 +27,27 @@ const deleteFile = (filePath) => {
 // Rota para criar um novo professor com upload de foto e contrato
 router.post('/', upload.fields([{ name: 'foto', maxCount: 1 }, { name: 'contrato', maxCount: 1 }]), async (req, res) => {
   try {
-    const { nome, apelido, sexo, data_nascimento, cpf, cnpj, email, telefone, endereco, cidade, estado, valor_hora, dia_pagamento, tipo_pagamento, pix, agencia, conta } = req.body;
+    const { nome, apelido, sexo, data_nascimento, cpf, cnpj, email, telefone, endereco, cidade, estado, valor_hora, dia_pagamento, tipo_pagamento, pix, agencia, conta, dados_bancarios } = req.body;
     
-    // Captura o caminho correto para foto e contrato
-    const foto = req.files['foto'] ? `uploads/${req.files['foto'][0].filename}` : null;
-    const contrato = req.files['contrato'] ? `uploads/${req.files['contrato'][0].filename}` : null;
+
+    const foto = req.files && req.files['foto'] ? `uploads/${req.files['foto'][0].filename}` : null;
+    const contrato = req.files && req.files['contrato'] ? `uploads/${req.files['contrato'][0].filename}` : null;
+    
     
     const query = `
-      INSERT INTO professores (nome, apelido, sexo, data_nascimento, cpf, cnpj, email, telefone, endereco, cidade, estado, valor_hora, dia_pagamento, tipo_pagamento, pix, agencia, conta, foto, contrato)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      INSERT INTO professores (nome, apelido, sexo, data_nascimento, cpf, cnpj, email, telefone, endereco, cidade, estado, valor_hora, dia_pagamento, tipo_pagamento, pix, agencia, conta, foto, contrato, dados_bancarios)
+      VALUES ($1, $2, $3, COALESCE($4, CURRENT_DATE), $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
       RETURNING *;
     `;
     
-    const values = [nome, apelido, sexo, data_nascimento, cpf, cnpj, email, telefone, endereco, cidade, estado, valor_hora, dia_pagamento, tipo_pagamento, pix, agencia, conta, foto, contrato];
+    const values = [
+      nome, apelido, sexo, data_nascimento || null, // COALESCE usará CURRENT_DATE no SQL
+      cpf, cnpj, email, telefone, endereco, cidade, estado, valor_hora, dia_pagamento, 
+      tipo_pagamento, pix, agencia, conta, foto, contrato, dados_bancarios
+    ];
     
     const result = await pool.query(query, values);
-    res.status(201).json(result.rows[0]); // Retorna o professor criado
+    res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Erro ao criar professor:', error);
     res.status(400).json({ error: error.message });
@@ -53,7 +58,7 @@ router.post('/', upload.fields([{ name: 'foto', maxCount: 1 }, { name: 'contrato
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM professores ORDER BY nome ASC;');
-    res.json(result.rows); // Retorna a lista de professores
+    res.json(result.rows);
   } catch (error) {
     console.error('Erro ao listar professores:', error);
     res.status(500).json({ error: error.message });
@@ -80,41 +85,42 @@ router.get('/:id', async (req, res) => {
 // Rota para atualizar um professor com upload de foto e contrato
 router.put('/:id', upload.fields([{ name: 'foto', maxCount: 1 }, { name: 'contrato', maxCount: 1 }]), async (req, res) => {
   try {
-    const { nome, apelido, sexo, data_nascimento, cpf, cnpj, email, telefone, endereco, cidade, estado, valor_hora, dia_pagamento, tipo_pagamento, pix, agencia, conta, fotoRemovida, contratoRemovido } = req.body;
+    const { nome, apelido, sexo, data_nascimento, cpf, cnpj, email, telefone, endereco, cidade, estado, valor_hora, dia_pagamento, tipo_pagamento, pix, agencia, conta, fotoRemovida, contratoRemovido, dados_bancarios } = req.body;
     
-    let foto = req.files['foto'] ? `uploads/${req.files['foto'][0].filename}` : null;
-    let contrato = req.files['contrato'] ? `uploads/${req.files['contrato'][0].filename}` : null;
+
+    let foto = req.files && req.files['foto'] ? `uploads/${req.files['foto'][0].filename}` : null;
+    let contrato = req.files && req.files['contrato'] ? `uploads/${req.files['contrato'][0].filename}` : null;
     
-    // Busca o professor atual para saber se há foto ou contrato existentes
+    
     const resultAtual = await pool.query('SELECT foto, contrato FROM professores WHERE id = $1;', [req.params.id]);
     const professorAtual = resultAtual.rows[0];
     
-    // Se a foto foi removida, excluir a foto existente e definir como null
     if (fotoRemovida === 'true' && professorAtual.foto) {
       deleteFile(professorAtual.foto);
       foto = null;
     } else if (!foto) {
-      // Se não foi enviado um novo arquivo de foto, manter o caminho da foto atual
       foto = professorAtual.foto;
     }
 
-    // Se o contrato foi removido, excluir o contrato existente e definir como null
     if (contratoRemovido === 'true' && professorAtual.contrato) {
       deleteFile(professorAtual.contrato);
       contrato = null;
     } else if (!contrato) {
-      // Se não foi enviado um novo arquivo de contrato, manter o caminho do contrato atual
       contrato = professorAtual.contrato;
     }
     
     const query = `
       UPDATE professores
-      SET nome = $1, apelido = $2, sexo = $3, data_nascimento = $4, cpf = $5, cnpj = $6, email = $7, telefone = $8, endereco = $9, cidade = $10, estado = $11, valor_hora = $12, dia_pagamento = $13, tipo_pagamento = $14, pix = $15, agencia = $16, conta = $17, foto = $18, contrato = $19, updated_at = NOW()
-      WHERE id = $20
+      SET nome = $1, apelido = $2, sexo = $3, data_nascimento = COALESCE($4, CURRENT_DATE), cpf = $5, cnpj = $6, email = $7, telefone = $8, endereco = $9, cidade = $10, estado = $11, valor_hora = $12, dia_pagamento = $13, tipo_pagamento = $14, pix = $15, agencia = $16, conta = $17, foto = $18, contrato = $19, dados_bancarios = $20, updated_at = NOW()
+      WHERE id = $21
       RETURNING *;
     `;
     
-    const values = [nome, apelido, sexo, data_nascimento, cpf, cnpj, email, telefone, endereco, cidade, estado, valor_hora, dia_pagamento, tipo_pagamento, pix, agencia, conta, foto, contrato, req.params.id];
+    const values = [
+      nome, apelido, sexo, data_nascimento || null, // COALESCE usará CURRENT_DATE no SQL
+      cpf, cnpj, email, telefone, endereco, cidade, estado, valor_hora, dia_pagamento, 
+      tipo_pagamento, pix, agencia, conta, foto, contrato, dados_bancarios, req.params.id
+    ];
     
     const result = await pool.query(query, values);
     const professorAtualizado = result.rows[0];

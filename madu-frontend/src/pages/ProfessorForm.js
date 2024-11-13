@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Box, Button } from '@mui/material';
+import { Box, Button, TextField } from '@mui/material';
 import FormInput from '../components/FormInput';
 import FormSelect from '../components/FormSelect';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { ptBR } from 'date-fns/locale';
 
 const ProfessorForm = () => {
   const [form, setForm] = useState({
@@ -13,6 +16,13 @@ const ProfessorForm = () => {
     sexo: '',
     telefone: '',
     cpf: '',
+    cnpj: '',
+    data_nascimento: '',
+    endereco: '',
+    cidade: '',
+    estado: '',
+    valor_hora: '',
+    dia_pagamento: '',
     tipo_pagamento: '',
     pix: '',
     agencia: '',
@@ -30,23 +40,39 @@ const ProfessorForm = () => {
     if (id) {
       axios.get(`http://localhost:5001/professores/${id}`)
         .then((response) => {
-          setForm(response.data);
+          const data = response.data;
+          data.data_nascimento = data.data_nascimento ? new Date(data.data_nascimento) : null;
+          setForm(data);
         })
         .catch((error) => console.error('Erro ao buscar professor:', error));
     }
   }, [id]);
 
+
+  const handleRemoveFile = (fileType) => {
+    setForm({
+      ...form,
+      [`${fileType}Removido`]: true, // Define que o arquivo foi removido
+      [fileType]: null // Remove o valor do campo de arquivo
+    });
+  };
+  
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const formData = new FormData();
-
-    // Adiciona todos os campos ao formData
+  
+    // Adiciona todos os campos ao FormData
     Object.keys(form).forEach((key) => {
-      if (form[key] !== null && form[key] !== undefined) {
+      if (key === 'data_nascimento' && form.data_nascimento) {
+        formData.append('data_nascimento', form.data_nascimento.toISOString().split('T')[0]); // Formata a data de nascimento
+      } else if (key === 'dia_pagamento') {
+        formData.append('dia_pagamento', parseInt(form.dia_pagamento, 10)); // Garante que dia_pagamento é um número inteiro
+      } else if (form[key] !== null && form[key] !== undefined) {
         formData.append(key, form[key]);
       }
     });
-
+  
     const request = id
       ? axios.put(`http://localhost:5001/professores/${id}`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
@@ -54,11 +80,12 @@ const ProfessorForm = () => {
       : axios.post('http://localhost:5001/professores', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-
+  
     request
       .then(() => navigate('/professores'))
       .catch((error) => console.error('Erro ao adicionar/atualizar professor:', error));
   };
+  
 
   const handleChange = (e) => {
     setForm({
@@ -67,11 +94,10 @@ const ProfessorForm = () => {
     });
   };
 
-  const handleRemoveFile = (fileType) => {
+  const handleDateChange = (date) => {
     setForm({
       ...form,
-      [`${fileType}Removido`]: true, // Define que o arquivo foi removido
-      [fileType]: null // Remove o valor do campo de arquivo
+      data_nascimento: date,
     });
   };
 
@@ -95,10 +121,24 @@ const ProfessorForm = () => {
       <FormInput label="Telefone" name="telefone" value={form.telefone} onChange={handleChange} required />
       <FormInput label="CPF" name="cpf" value={form.cpf} onChange={handleChange} required />
 
-      {/* Novo campo de tipo de pagamento */}
+      {/* Campo de Data de Nascimento com suporte para pt-BR */}
+      <DatePicker
+        selected={form.data_nascimento}
+        onChange={handleDateChange}
+        dateFormat="dd/MM/yyyy"
+        locale={ptBR}
+        customInput={<TextField label="Data de Nascimento" fullWidth required />}
+      />
+
+      <FormInput label="CNPJ" name="cnpj" value={form.cnpj} onChange={handleChange} required />
+      <FormInput label="Endereço" name="endereco" value={form.endereco} onChange={handleChange} required />
+      <FormInput label="Cidade" name="cidade" value={form.cidade} onChange={handleChange} required />
+      <FormInput label="Estado" name="estado" value={form.estado} onChange={handleChange} required />
+      <FormInput label="Valor por Hora" name="valor_hora" value={form.valor_hora} onChange={handleChange} required />
+      <FormInput label="Dia de Pagamento" name="dia_pagamento" value={form.dia_pagamento} onChange={handleChange} required />
+
       <FormSelect label="Tipo de Pagamento" name="tipo_pagamento" value={form.tipo_pagamento} onChange={handleChange} options={tipoPagamentoOptions} required />
 
-      {/* Campos condicionalmente exibidos */}
       {form.tipo_pagamento === 'pix' && (
         <FormInput label="Chave PIX" name="pix" value={form.pix} onChange={handleChange} required />
       )}

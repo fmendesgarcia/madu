@@ -68,6 +68,9 @@ describe('Rotas de Professores', () => {
         dados_bancarios: "chave-pix-atualizada",
         contrato: "https://contrato-url-atualizado.com"
       });
+
+    console.log("Status:", res.statusCode);
+    console.log("Response body:", res.body);
     
     expect(res.statusCode).toEqual(200);  // Verifica se o status code é 200 (OK)
     expect(res.body).toHaveProperty('apelido', "Carlão Atualizado");  // Verifica se o apelido foi atualizado
