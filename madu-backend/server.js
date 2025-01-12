@@ -27,6 +27,7 @@ const vendaRoutes = require('./routes/vendaRoutes');
 const mensalidadeRoutes = require('./routes/mensalidadeRoutes');
 const lancamentoRoutes = require('./routes/lancamentoRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 
 
@@ -48,6 +49,7 @@ app.use('/vendas', vendaRoutes);
 app.use('/mensalidades', mensalidadeRoutes);
 app.use('/lancamentos', lancamentoRoutes);
 app.use('/dashboard', dashboardRoutes);
+app.use('/auth', authRoutes);
 
 
 
