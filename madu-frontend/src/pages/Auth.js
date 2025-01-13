@@ -27,6 +27,12 @@ const Auth = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!email || !password) {
+      setError('Por favor, preencha todos os campos.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
@@ -58,7 +64,7 @@ const Auth = () => {
         sx={{
           padding: 4,
           width: '100%',
-          maxWidth: 400,
+          maxWidth: { xs: 300, sm: 400 },
           borderRadius: 2,
         }}
       >
@@ -77,6 +83,9 @@ const Auth = () => {
             fullWidth
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            error={!!error && error.includes('E-mail')}
+            helperText={error && error.includes('E-mail') ? 'E-mail inválido' : ''}
+            inputProps={{ 'aria-label': 'E-mail' }}
           />
           <TextField
             label="Senha"
@@ -85,6 +94,9 @@ const Auth = () => {
             fullWidth
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            error={!!error && error.includes('Senha')}
+            helperText={error && error.includes('Senha') ? 'Senha inválida' : ''}
+            inputProps={{ 'aria-label': 'Senha' }}
           />
           {error && (
             <Typography color="error" variant="body2">
@@ -95,8 +107,13 @@ const Auth = () => {
             type="submit"
             variant="contained"
             fullWidth
-            sx={{ mt: 2 }}
+            sx={{
+              mt: 2,
+              backgroundColor: 'primary.main',
+              '&:hover': { backgroundColor: 'primary.dark' },
+            }}
             disabled={loading}
+            aria-label="Entrar"
           >
             {loading ? <CircularProgress size={24} color="inherit" /> : 'Entrar'}
           </Button>
