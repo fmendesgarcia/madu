@@ -18,12 +18,12 @@ const Auth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Redireciona se o usuário já estiver logado
     const token = localStorage.getItem('token');
     if (token) {
-      navigate('/dashboard');
+      navigate('/dashboard'); // Redireciona para o dashboard se já estiver logado
     }
   }, [navigate]);
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,7 +39,8 @@ const Auth = () => {
       const response = await api.post('/auth/login', { email, password });
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
-      navigate('/dashboard');
+      navigate('/dashboard'); // Redireciona imediatamente após login bem-sucedido
+      window.location.reload(); // Garante que o estado global de autenticação seja atualizado
     } catch (err) {
       const errorMessage =
         err.response?.data?.message || 'Erro ao realizar login. Tente novamente.';
@@ -47,6 +48,7 @@ const Auth = () => {
     } finally {
       setLoading(false);
     }
+    
   };
 
   return (

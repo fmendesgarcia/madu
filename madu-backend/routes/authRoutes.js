@@ -23,12 +23,39 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Senha inválida!' });
     }
 
+    // Gerar token
     const token = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY, { expiresIn: '1h' });
-    res.json({ token });
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name, // Inclua qualquer outra informação relevante do usuário
+      },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Erro no servidor.' });
   }
 });
+
+// Rota para validar o token
+router.get('/validate-token', (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ valid: false, message: 'Token não fornecido!' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, SECRET_KEY);
+    res.json({ valid: true, user: decoded });
+  } catch (err) {
+    console.error('Erro ao validar token:', err);
+    res.status(401).json({ valid: false, message: 'Token inválido ou expirado!' });
+  }
+});
+
 
 module.exports = router;
