@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Button, FormControlLabel, Checkbox, TextField, MenuItem, Select, InputLabel, FormControl, RadioGroup, Radio, FormLabel } from '@mui/material';
 import FormInput from '../components/FormInput'; // Usando FormInput
@@ -33,14 +33,14 @@ const MatriculaForm = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const alunosResponse = await axios.get('http://localhost:5001/alunos');
+        const alunosResponse = await api.get('http://localhost:5001/alunos');
         setAlunos(alunosResponse.data);
 
-        const turmasResponse = await axios.get('http://localhost:5001/turmas');
+        const turmasResponse = await api.get('http://localhost:5001/turmas');
         setTurmas(turmasResponse.data);
 
         if (id) {
-          const matriculaResponse = await axios.get(`http://localhost:5001/matriculas/${id}`);
+          const matriculaResponse = await api.get(`http://localhost:5001/matriculas/${id}`);
           const matricula = matriculaResponse.data;
 
           if (matricula.data_matricula) {
@@ -97,7 +97,7 @@ const MatriculaForm = () => {
 
     // Fetch para buscar os valores das turmas selecionadas e calcular a mensalidade total
     if (value.length > 0) {
-      axios
+      api
         .post('http://localhost:5001/turmas/valores', { turma_ids: value })
         .then((response) => {
           const { valores } = response.data;
@@ -131,7 +131,7 @@ const MatriculaForm = () => {
     };
 
     if (id) {
-      axios
+      api
         .put(`http://localhost:5001/matriculas/${id}`, formData)
         .then(() => {
           if (formData.status === 'inativa') {
@@ -141,7 +141,7 @@ const MatriculaForm = () => {
         })
         .catch((error) => console.error('Erro ao atualizar matrícula:', error));
     } else {
-      axios
+      api
         .post('http://localhost:5001/matriculas', formData)
         .then(() => navigate('/matriculas'))
         .catch((error) => console.error('Erro ao adicionar matrícula:', error));

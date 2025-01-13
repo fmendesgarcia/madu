@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import CustomTable from '../components/CustomTable';
 import { Button } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
@@ -9,7 +9,7 @@ const Matriculas = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get('http://localhost:5001/matriculas')
+    api.get('http://localhost:5001/matriculas')
       .then((response) => {
         // Formata as datas de matrícula e vencimento antes de atualizar o estado
         const formattedData = response.data.map(matricula => ({
@@ -39,7 +39,7 @@ const Matriculas = () => {
 
   const handleDelete = (id) => {
     if (window.confirm('Tem certeza que deseja excluir esta matrícula?')) {
-      axios.delete(`http://localhost:5001/matriculas/${id}`)
+      api.delete(`http://localhost:5001/matriculas/${id}`)
         .then(() => setMatriculas(matriculas.filter((matricula) => matricula.id !== id)))
         .catch((error) => console.error('Erro ao excluir matrícula:', error));
     }

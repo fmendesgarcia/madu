@@ -1,6 +1,6 @@
 // src/pages/Alunos.js
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import CustomTable from '../components/CustomTable';
 import { Button } from '@mui/material';
@@ -10,7 +10,7 @@ const Alunos = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get('http://localhost:5001/alunos')
+    api.get('http://localhost:5001/alunos')
       .then((response) => {
         setAlunos(response.data);
       })
@@ -21,7 +21,7 @@ const Alunos = () => {
 
   const handleDelete = (id) => {
     if (window.confirm('Tem certeza que deseja excluir este aluno?')) {
-      axios.delete(`http://localhost:5001/alunos/${id}`)
+      api.delete(`http://localhost:5001/alunos/${id}`)
         .then(() => {
           setAlunos(alunos.filter((aluno) => aluno.id !== id));
         })

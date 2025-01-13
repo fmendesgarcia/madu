@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { Table, TableHead, TableBody, TableRow, TableCell, Button, Select, MenuItem, FormControl, InputLabel, Modal, TextField } from '@mui/material';
 import { useNavigate } from 'react-router-dom'; // Para navegação
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -20,7 +20,7 @@ const GerenciarMensalidades = () => {
 
   // Carrega as mensalidades da API
   useEffect(() => {
-    axios.get('http://localhost:5001/mensalidades')
+    api.get('http://localhost:5001/mensalidades')
       .then(response => {
         console.log('Dados recebidos do backend:', response); // Verifique os dados completos
         setMensalidades(response.data);
@@ -47,7 +47,7 @@ const GerenciarMensalidades = () => {
       return;
     }
   
-    axios.post('http://localhost:5001/pagamentos', {
+    api.post('http://localhost:5001/pagamentos', {
       mensalidade_id: mensalidadeSelecionada,
       data_pagamento: dataPagamento,
       valor_pago: valorPago,
@@ -81,7 +81,7 @@ const GerenciarMensalidades = () => {
   };
 
   const carregarMensalidades = () => {
-    axios.get('http://localhost:5001/mensalidades')
+    api.get('http://localhost:5001/mensalidades')
       .then(response => {
         setMensalidades(response.data);
       })

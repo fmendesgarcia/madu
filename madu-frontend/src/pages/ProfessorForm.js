@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Button, TextField } from '@mui/material';
 import FormInput from '../components/FormInput';
@@ -38,7 +38,7 @@ const ProfessorForm = () => {
 
   useEffect(() => {
     if (id) {
-      axios.get(`http://localhost:5001/professores/${id}`)
+      api.get(`http://localhost:5001/professores/${id}`)
         .then((response) => {
           const data = response.data;
           data.data_nascimento = data.data_nascimento ? new Date(data.data_nascimento) : null;
@@ -74,10 +74,10 @@ const ProfessorForm = () => {
     });
   
     const request = id
-      ? axios.put(`http://localhost:5001/professores/${id}`, formData, {
+      ? api.put(`http://localhost:5001/professores/${id}`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         })
-      : axios.post('http://localhost:5001/professores', formData, {
+      : api.post('http://localhost:5001/professores', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
   

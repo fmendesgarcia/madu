@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom'; // Importa o hook para redirecionar
-import axios from 'axios';
+import api from '../services/api';
 import {
   Box,
   Button,
@@ -18,7 +18,7 @@ const Auth = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:5001/auth/login', {
+      const response = await api.post('http://localhost:5001/auth/login', {
         email,
         password,
       });

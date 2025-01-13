@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { Dialog, DialogActions, DialogContent, DialogTitle, Button, Checkbox, List, ListItem, ListItemText, ListItemSecondaryAction, TextField } from '@mui/material';
 
 const AulaModal = ({ 
@@ -20,7 +20,7 @@ const AulaModal = ({
   // Função para buscar a lista de presença da aula
   useEffect(() => {
     if (showPresenceModal && aulaId) {
-      axios.get(`http://localhost:5001/presencas/aulas/${aulaId}/presencas`)
+      api.get(`http://localhost:5001/presencas/aulas/${aulaId}/presencas`)
         .then(response => {
           setPresenceList(response.data);
         })
@@ -42,7 +42,7 @@ const AulaModal = ({
   // Função para salvar a lista de presença
   const savePresenceList = () => {
     const promises = presenceList.map(item => 
-      axios.post('http://localhost:5001/presencas', {
+      api.post('http://localhost:5001/presencas', {
         aluno_id: item.aluno_id,
         aula_id: aulaId,
         presente: item.presente

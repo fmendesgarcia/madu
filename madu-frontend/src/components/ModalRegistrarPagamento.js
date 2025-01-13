@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, Button, TextField, MenuItem, Select, InputLabel, FormControl, FormHelperText } from '@mui/material';
-import axios from 'axios';
+import api from '../services/api';
 
 const ModalRegistrarPagamento = ({ open, handleClose, mensalidadeId, recarregarMensalidades }) => {
   const [dataPagamento, setDataPagamento] = useState('');
@@ -15,7 +15,7 @@ const ModalRegistrarPagamento = ({ open, handleClose, mensalidadeId, recarregarM
       return;
     }
 
-    axios.post('http://localhost:5001/pagamentos', {
+    api.post('http://localhost:5001/pagamentos', {
       mensalidade_id: mensalidadeId,
       data_pagamento: dataPagamento,
       valor_pago: valorPago,

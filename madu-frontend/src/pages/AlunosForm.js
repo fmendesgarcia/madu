@@ -1,6 +1,6 @@
 // src/pages/AlunoForm.js
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Button, FormControlLabel, Checkbox, TextField, Typography} from '@mui/material';
 import FormInput from '../components/FormInput';
@@ -37,7 +37,7 @@ const AlunoForm = () => {
 
   useEffect(() => {
     if (id) {
-      axios.get(`http://localhost:5001/alunos/${id}`)
+      api.get(`http://localhost:5001/alunos/${id}`)
         .then((response) => {
           const aluno = response.data;
   
@@ -109,14 +109,14 @@ const AlunoForm = () => {
   
     if (id) {
       // Atualizar aluno existente
-      axios.put(`http://localhost:5001/alunos/${id}`, formData, {
+      api.put(`http://localhost:5001/alunos/${id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
         .then(() => navigate('/alunos'))
         .catch((error) => console.error('Erro ao atualizar aluno:', error));
     } else {
       // Adicionar novo aluno
-      axios.post('http://localhost:5001/alunos', formData, {
+      api.post('http://localhost:5001/alunos', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
         .then(() => navigate('/alunos'))

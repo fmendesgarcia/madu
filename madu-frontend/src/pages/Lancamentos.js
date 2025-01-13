@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { Table, TableHead, TableBody, TableRow, TableCell, Button, Select, MenuItem, FormControl, InputLabel, Modal, TextField, IconButton } from '@mui/material';
 import { AttachMoney, MoneyOff } from '@mui/icons-material';
 
@@ -19,7 +19,7 @@ const GerenciarLancamentos = () => {
   }, [mes, ano]);
 
   const carregarLancamentos = () => {
-    axios.get('http://localhost:5001/lancamentos', {
+    api.get('http://localhost:5001/lancamentos', {
       params: { mes, ano }
     })
     .then(response => setLancamentos(response.data))
@@ -48,13 +48,13 @@ const GerenciarLancamentos = () => {
     const data = { descricao, tipo, valor, data_lancamento: dataLancamento };
 
     if (lancamentoSelecionado) {
-      axios.put(`http://localhost:5001/lancamentos/${lancamentoSelecionado.id}`, data)
+      api.put(`http://localhost:5001/lancamentos/${lancamentoSelecionado.id}`, data)
         .then(() => {
           carregarLancamentos();
           fecharModal();
         }).catch(error => console.error('Erro ao atualizar lançamento:', error));
     } else {
-      axios.post('http://localhost:5001/lancamentos', data)
+      api.post('http://localhost:5001/lancamentos', data)
         .then(() => {
           carregarLancamentos();
           fecharModal();
@@ -64,7 +64,7 @@ const GerenciarLancamentos = () => {
 
   const deletarLancamento = (id) => {
     if (window.confirm('Tem certeza que deseja excluir este lançamento?')) {
-      axios.delete(`http://localhost:5001/lancamentos/${id}`)
+      api.delete(`http://localhost:5001/lancamentos/${id}`)
         .then(() => carregarLancamentos())
         .catch(error => console.error('Erro ao excluir lançamento:', error));
     }

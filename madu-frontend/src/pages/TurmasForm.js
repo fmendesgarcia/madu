@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Button } from '@mui/material';
 import FormInput from '../components/FormInput';
@@ -35,12 +35,12 @@ const TurmaForm = () => {
 
   // Função para carregar dados ao editar
   useEffect(() => {
-    axios.get('http://localhost:5001/professores')
+    api.get('http://localhost:5001/professores')
       .then((response) => setProfessores(response.data))
       .catch((error) => console.error('Erro ao buscar professores:', error));
 
     if (turmaId) {
-      axios.get(`http://localhost:5001/turmas/${turmaId}`)
+      api.get(`http://localhost:5001/turmas/${turmaId}`)
         .then((response) => {
           const turma = response.data;
 
@@ -66,9 +66,9 @@ const TurmaForm = () => {
       let newTurmaId = turmaId;
 
       if (turmaId) {
-        await axios.put(`http://localhost:5001/turmas/${turmaId}`, form);
+        await api.put(`http://localhost:5001/turmas/${turmaId}`, form);
       } else {
-        const response = await axios.post('http://localhost:5001/turmas', form);
+        const response = await api.post('http://localhost:5001/turmas', form);
         newTurmaId = response.data.id; // Obtemos o ID da turma recém-criada
       }
 

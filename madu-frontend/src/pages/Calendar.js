@@ -4,14 +4,14 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid'; 
 import timeGridPlugin from '@fullcalendar/timegrid'; 
 import interactionPlugin from '@fullcalendar/interaction'; 
-import axios from 'axios';
+import api from '../services/api';
 
 const Calendar = () => {
   const [events, setEvents] = useState([]);
 
   useEffect(() => {
     // Buscando as aulas do backend
-    axios.get('/api/aulas') // Essa rota deve retornar as aulas do backend
+    api.get('/api/aulas') // Essa rota deve retornar as aulas do backend
       .then((response) => {
         setEvents(response.data);
       })
@@ -34,7 +34,7 @@ const Calendar = () => {
       };
       
       // Envia o novo evento para o backend
-      axios.post('/api/aulas', newEvent)
+      api.post('/api/aulas', newEvent)
         .then((response) => {
           // Atualiza o calendário com o novo evento
           setEvents((prevEvents) => [...prevEvents, response.data]);
@@ -50,7 +50,7 @@ const Calendar = () => {
       clickInfo.event.remove(); // Remove visualmente do calendário
       
       // Remover o evento do backend
-      axios.delete(`/api/aulas/${clickInfo.event.id}`)
+      api.delete(`/api/aulas/${clickInfo.event.id}`)
         .catch((error) => console.error('Erro ao deletar aula:', error));
     }
   };

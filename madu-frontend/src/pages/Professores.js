@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import CustomTable from '../components/CustomTable';
 import { Button } from '@mui/material';
@@ -9,7 +9,7 @@ const Professores = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get('http://localhost:5001/professores')
+    api.get('http://localhost:5001/professores')
       .then((response) => {
         setProfessores(response.data);
       })
@@ -20,7 +20,7 @@ const Professores = () => {
 
   const handleDelete = (id) => {
     if (window.confirm('Tem certeza que deseja excluir este professor?')) {
-      axios.delete(`http://localhost:5001/professores/${id}`)
+      api.delete(`http://localhost:5001/professores/${id}`)
         .then(() => {
           setProfessores(professores.filter((professor) => professor.id !== id));
         })

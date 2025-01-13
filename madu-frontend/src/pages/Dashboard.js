@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { Box, Typography } from '@mui/material';
 import { Bar, Pie } from 'react-chartjs-2';
 import { Chart, CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
@@ -16,7 +16,7 @@ const Dashboard = () => {
   const [loadingStatusReceitas, setLoadingStatusReceitas] = useState(true);
 
   useEffect(() => {
-    axios.get('http://localhost:5001/dashboard/saldo-mensal')
+    api.get('http://localhost:5001/dashboard/saldo-mensal')
       .then((response) => {
         setDadosMensais(response.data);
         setLoadingMensal(false);
@@ -26,7 +26,7 @@ const Dashboard = () => {
         setLoadingMensal(false);
       });
 
-    axios.get('http://localhost:5001/dashboard/receitas-despesas')
+    api.get('http://localhost:5001/dashboard/receitas-despesas')
       .then((response) => {
         setReceitasDespesas(response.data);
         setLoadingReceitasDespesas(false);
@@ -36,7 +36,7 @@ const Dashboard = () => {
         setLoadingReceitasDespesas(false);
       });
 
-    axios.get('http://localhost:5001/dashboard/status-receitas')
+    api.get('http://localhost:5001/dashboard/status-receitas')
       .then((response) => {
         setStatusReceitas(response.data);
         setLoadingStatusReceitas(false);

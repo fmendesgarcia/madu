@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { Table, TableHead, TableBody, TableRow, TableCell, Button } from '@mui/material';
 
 const Pagamentos = () => {
@@ -7,7 +7,7 @@ const Pagamentos = () => {
 
   // Função para carregar os pagamentos
   useEffect(() => {
-    axios.get('http://localhost:5001/pagamentos')
+    api.get('http://localhost:5001/pagamentos')
       .then(response => {
         setPagamentos(response.data); // Atualiza o estado com os dados dos pagamentos
       })

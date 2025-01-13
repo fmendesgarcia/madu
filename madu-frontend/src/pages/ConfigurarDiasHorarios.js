@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Button, FormControlLabel, Checkbox, TextField, IconButton } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -27,7 +27,7 @@ const ConfigurarDiasHorarios = () => {
   // Função para buscar horários ao carregar o componente
   useEffect(() => {
     if (turmaId) {
-      axios.get(`http://localhost:5001/turmas/${turmaId}/horarios`)
+      api.get(`http://localhost:5001/turmas/${turmaId}/horarios`)
         .then((response) => {
           const horariosSalvos = response.data;
           console.log('Horários salvos:', horariosSalvos);  // Verifique se os dados chegam aqui
@@ -113,7 +113,7 @@ const ConfigurarDiasHorarios = () => {
       }))
     );
 
-    axios.post(`http://localhost:5001/turmas/${turmaId}/horarios`, { horarios: horariosFormatados })
+    api.post(`http://localhost:5001/turmas/${turmaId}/horarios`, { horarios: horariosFormatados })
       .then(() => navigate('/turmas')) // Navega de volta para a página de turmas
       .catch((error) => console.error('Erro ao salvar horários:', error));
   };

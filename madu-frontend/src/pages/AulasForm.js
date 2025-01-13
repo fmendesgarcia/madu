@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Button, TextField } from '@mui/material';
 import FormInput from '../components/FormInput';
@@ -22,14 +22,14 @@ const AulaForm = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get('http://localhost:5001/turmas')
+    api.get('http://localhost:5001/turmas')
       .then((response) => {
         setTurmas(response.data);
       })
       .catch((error) => console.error('Erro ao buscar turmas:', error));
   
     if (id) {
-      axios.get(`http://localhost:5001/aulas/${id}`)
+      api.get(`http://localhost:5001/aulas/${id}`)
         .then((response) => {
           const aula = response.data;
   
@@ -66,11 +66,11 @@ const AulaForm = () => {
     }
 
     if (id) {
-      axios.put(`http://localhost:5001/aulas/${id}`, formData)
+      api.put(`http://localhost:5001/aulas/${id}`, formData)
         .then(() => navigate('/aulas'))
         .catch((error) => console.error('Erro ao atualizar aula:', error));
     } else {
-      axios.post('http://localhost:5001/aulas', formData)
+      api.post('http://localhost:5001/aulas', formData)
         .then(() => navigate('/aulas'))
         .catch((error) => console.error('Erro ao adicionar aula:', error));
     }

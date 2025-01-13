@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import CustomTable from '../components/CustomTable';
 import { Button, IconButton } from '@mui/material';
@@ -10,7 +10,7 @@ const Turmas = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get('http://localhost:5001/turmas')
+    api.get('http://localhost:5001/turmas')
       .then((response) => {
         // Formatamos os dias da semana e horários antes de atualizar o estado
         const turmasFormatadas = response.data.map(turma => ({
@@ -25,7 +25,7 @@ const Turmas = () => {
 
   const handleDelete = (id) => {
     if (window.confirm('Tem certeza que deseja excluir esta turma?')) {
-      axios.delete(`http://localhost:5001/turmas/${id}`)
+      api.delete(`http://localhost:5001/turmas/${id}`)
         .then(() => setTurmas(turmas.filter((turma) => turma.id !== id)))
         .catch((error) => console.error('Erro ao excluir turma:', error));
     }
