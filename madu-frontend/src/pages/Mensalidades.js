@@ -20,7 +20,7 @@ const GerenciarMensalidades = () => {
 
   // Carrega as mensalidades da API
   useEffect(() => {
-    api.get('http://localhost:5001/mensalidades')
+    api.get('/mensalidades')
       .then(response => {
         console.log('Dados recebidos do backend:', response); // Verifique os dados completos
         setMensalidades(response.data);
@@ -47,7 +47,7 @@ const GerenciarMensalidades = () => {
       return;
     }
   
-    api.post('http://localhost:5001/pagamentos', {
+    api.post('/pagamentos', {
       mensalidade_id: mensalidadeSelecionada,
       data_pagamento: dataPagamento,
       valor_pago: valorPago,
@@ -81,7 +81,7 @@ const GerenciarMensalidades = () => {
   };
 
   const carregarMensalidades = () => {
-    api.get('http://localhost:5001/mensalidades')
+    api.get('/mensalidades')
       .then(response => {
         setMensalidades(response.data);
       })

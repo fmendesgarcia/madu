@@ -22,14 +22,14 @@ const AulaForm = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.get('http://localhost:5001/turmas')
+    api.get('/turmas')
       .then((response) => {
         setTurmas(response.data);
       })
       .catch((error) => console.error('Erro ao buscar turmas:', error));
   
     if (id) {
-      api.get(`http://localhost:5001/aulas/${id}`)
+      api.get(`/aulas/${id}`)
         .then((response) => {
           const aula = response.data;
   
@@ -66,11 +66,11 @@ const AulaForm = () => {
     }
 
     if (id) {
-      api.put(`http://localhost:5001/aulas/${id}`, formData)
+      api.put(`/aulas/${id}`, formData)
         .then(() => navigate('/aulas'))
         .catch((error) => console.error('Erro ao atualizar aula:', error));
     } else {
-      api.post('http://localhost:5001/aulas', formData)
+      api.post('/aulas', formData)
         .then(() => navigate('/aulas'))
         .catch((error) => console.error('Erro ao adicionar aula:', error));
     }

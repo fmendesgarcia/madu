@@ -33,14 +33,14 @@ const MatriculaForm = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const alunosResponse = await api.get('http://localhost:5001/alunos');
+        const alunosResponse = await api.get('/alunos');
         setAlunos(alunosResponse.data);
 
-        const turmasResponse = await api.get('http://localhost:5001/turmas');
+        const turmasResponse = await api.get('/turmas');
         setTurmas(turmasResponse.data);
 
         if (id) {
-          const matriculaResponse = await api.get(`http://localhost:5001/matriculas/${id}`);
+          const matriculaResponse = await api.get(`/matriculas/${id}`);
           const matricula = matriculaResponse.data;
 
           if (matricula.data_matricula) {
@@ -98,7 +98,7 @@ const MatriculaForm = () => {
     // Fetch para buscar os valores das turmas selecionadas e calcular a mensalidade total
     if (value.length > 0) {
       api
-        .post('http://localhost:5001/turmas/valores', { turma_ids: value })
+        .post('/turmas/valores', { turma_ids: value })
         .then((response) => {
           const { valores } = response.data;
           const totalMensalidade = valores.reduce((acc, val) => acc + val, 0);
@@ -132,7 +132,7 @@ const MatriculaForm = () => {
 
     if (id) {
       api
-        .put(`http://localhost:5001/matriculas/${id}`, formData)
+        .put(`/matriculas/${id}`, formData)
         .then(() => {
           if (formData.status === 'inativa') {
             setIsInativoSalvo(true); // Define o status "inativa" como salvo
@@ -142,7 +142,7 @@ const MatriculaForm = () => {
         .catch((error) => console.error('Erro ao atualizar matrícula:', error));
     } else {
       api
-        .post('http://localhost:5001/matriculas', formData)
+        .post('/matriculas', formData)
         .then(() => navigate('/matriculas'))
         .catch((error) => console.error('Erro ao adicionar matrícula:', error));
     }

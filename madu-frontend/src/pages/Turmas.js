@@ -10,7 +10,7 @@ const Turmas = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.get('http://localhost:5001/turmas')
+    api.get('/turmas')
       .then((response) => {
         // Formatamos os dias da semana e horários antes de atualizar o estado
         const turmasFormatadas = response.data.map(turma => ({
@@ -25,7 +25,7 @@ const Turmas = () => {
 
   const handleDelete = (id) => {
     if (window.confirm('Tem certeza que deseja excluir esta turma?')) {
-      api.delete(`http://localhost:5001/turmas/${id}`)
+      api.delete(`/turmas/${id}`)
         .then(() => setTurmas(turmas.filter((turma) => turma.id !== id)))
         .catch((error) => console.error('Erro ao excluir turma:', error));
     }

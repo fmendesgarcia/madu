@@ -16,7 +16,7 @@ const Dashboard = () => {
   const [loadingStatusReceitas, setLoadingStatusReceitas] = useState(true);
 
   useEffect(() => {
-    api.get('http://localhost:5001/dashboard/saldo-mensal')
+    api.get('/dashboard/saldo-mensal')
       .then((response) => {
         setDadosMensais(response.data);
         setLoadingMensal(false);
@@ -26,7 +26,7 @@ const Dashboard = () => {
         setLoadingMensal(false);
       });
 
-    api.get('http://localhost:5001/dashboard/receitas-despesas')
+    api.get('/dashboard/receitas-despesas')
       .then((response) => {
         setReceitasDespesas(response.data);
         setLoadingReceitasDespesas(false);
@@ -36,7 +36,7 @@ const Dashboard = () => {
         setLoadingReceitasDespesas(false);
       });
 
-    api.get('http://localhost:5001/dashboard/status-receitas')
+    api.get('/dashboard/status-receitas')
       .then((response) => {
         setStatusReceitas(response.data);
         setLoadingStatusReceitas(false);

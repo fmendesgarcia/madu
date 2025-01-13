@@ -9,7 +9,7 @@ const Matriculas = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.get('http://localhost:5001/matriculas')
+    api.get('/matriculas')
       .then((response) => {
         // Formata as datas de matrícula e vencimento antes de atualizar o estado
         const formattedData = response.data.map(matricula => ({
@@ -39,7 +39,7 @@ const Matriculas = () => {
 
   const handleDelete = (id) => {
     if (window.confirm('Tem certeza que deseja excluir esta matrícula?')) {
-      api.delete(`http://localhost:5001/matriculas/${id}`)
+      api.delete(`/matriculas/${id}`)
         .then(() => setMatriculas(matriculas.filter((matricula) => matricula.id !== id)))
         .catch((error) => console.error('Erro ao excluir matrícula:', error));
     }

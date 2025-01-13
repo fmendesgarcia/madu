@@ -35,12 +35,12 @@ const TurmaForm = () => {
 
   // Função para carregar dados ao editar
   useEffect(() => {
-    api.get('http://localhost:5001/professores')
+    api.get('/professores')
       .then((response) => setProfessores(response.data))
       .catch((error) => console.error('Erro ao buscar professores:', error));
 
     if (turmaId) {
-      api.get(`http://localhost:5001/turmas/${turmaId}`)
+      api.get(`/turmas/${turmaId}`)
         .then((response) => {
           const turma = response.data;
 
@@ -66,9 +66,9 @@ const TurmaForm = () => {
       let newTurmaId = turmaId;
 
       if (turmaId) {
-        await api.put(`http://localhost:5001/turmas/${turmaId}`, form);
+        await api.put(`/turmas/${turmaId}`, form);
       } else {
-        const response = await api.post('http://localhost:5001/turmas', form);
+        const response = await api.post('/turmas', form);
         newTurmaId = response.data.id; // Obtemos o ID da turma recém-criada
       }
 

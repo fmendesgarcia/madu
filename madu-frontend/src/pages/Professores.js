@@ -9,7 +9,7 @@ const Professores = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.get('http://localhost:5001/professores')
+    api.get('/professores')
       .then((response) => {
         setProfessores(response.data);
       })
@@ -20,7 +20,7 @@ const Professores = () => {
 
   const handleDelete = (id) => {
     if (window.confirm('Tem certeza que deseja excluir este professor?')) {
-      api.delete(`http://localhost:5001/professores/${id}`)
+      api.delete(`/professores/${id}`)
         .then(() => {
           setProfessores(professores.filter((professor) => professor.id !== id));
         })
@@ -52,7 +52,7 @@ const Professores = () => {
       id: 'foto',
       label: 'Foto',
       render: (row) => row.foto 
-        ? <a href={`http://localhost:5001/${row.foto}`} target="_blank" rel="noopener noreferrer">Ver Foto</a> 
+        ? <a href={`${api.defaults.baseURL}/${row.foto}`} target="_blank" rel="noopener noreferrer">Ver Foto</a> 
         : 'N/A'
     }
   ];

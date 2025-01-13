@@ -10,7 +10,7 @@ const Alunos = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.get('http://localhost:5001/alunos')
+    api.get('/alunos')
       .then((response) => {
         setAlunos(response.data);
       })
@@ -21,7 +21,7 @@ const Alunos = () => {
 
   const handleDelete = (id) => {
     if (window.confirm('Tem certeza que deseja excluir este aluno?')) {
-      api.delete(`http://localhost:5001/alunos/${id}`)
+      api.delete(`/alunos/${id}`)
         .then(() => {
           setAlunos(alunos.filter((aluno) => aluno.id !== id));
         })

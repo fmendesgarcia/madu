@@ -20,7 +20,7 @@ const AulaModal = ({
   // Função para buscar a lista de presença da aula
   useEffect(() => {
     if (showPresenceModal && aulaId) {
-      api.get(`http://localhost:5001/presencas/aulas/${aulaId}/presencas`)
+      api.get(`/presencas/aulas/${aulaId}/presencas`)
         .then(response => {
           setPresenceList(response.data);
         })
@@ -42,7 +42,7 @@ const AulaModal = ({
   // Função para salvar a lista de presença
   const savePresenceList = () => {
     const promises = presenceList.map(item => 
-      api.post('http://localhost:5001/presencas', {
+      api.post('/presencas', {
         aluno_id: item.aluno_id,
         aula_id: aulaId,
         presente: item.presente

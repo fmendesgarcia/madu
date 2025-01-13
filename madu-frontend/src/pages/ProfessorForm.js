@@ -38,7 +38,7 @@ const ProfessorForm = () => {
 
   useEffect(() => {
     if (id) {
-      api.get(`http://localhost:5001/professores/${id}`)
+      api.get(`/professores/${id}`)
         .then((response) => {
           const data = response.data;
           data.data_nascimento = data.data_nascimento ? new Date(data.data_nascimento) : null;
@@ -74,10 +74,10 @@ const ProfessorForm = () => {
     });
   
     const request = id
-      ? api.put(`http://localhost:5001/professores/${id}`, formData, {
+      ? api.put(`/professores/${id}`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         })
-      : api.post('http://localhost:5001/professores', formData, {
+      : api.post('/professores', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
   
@@ -154,7 +154,7 @@ const ProfessorForm = () => {
         <label>Foto do Professor:</label>
         {form.foto && !form.fotoRemovida ? (
           <div>
-            <a href={`http://localhost:5001/${form.foto}`} target="_blank" rel="noopener noreferrer">Ver Foto</a>
+            <a href={`${api.defaults.baseURL}/${form.foto}`} target="_blank" rel="noopener noreferrer">Ver Foto</a>
             <Button variant="text" color="secondary" onClick={() => handleRemoveFile('foto')}>Remover</Button>
           </div>
         ) : (
@@ -166,7 +166,7 @@ const ProfessorForm = () => {
         <label>Contrato:</label>
         {form.contrato && !form.contratoRemovido ? (
           <div>
-            <a href={`http://localhost:5001/${form.contrato}`} target="_blank" rel="noopener noreferrer">Ver Contrato</a>
+            <a href={`${api.defaults.baseURL}/${form.contrato}`} target="_blank" rel="noopener noreferrer">Ver Contrato</a>
             <Button variant="text" color="secondary" onClick={() => handleRemoveFile('contrato')}>Remover</Button>
           </div>
         ) : (

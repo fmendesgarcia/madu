@@ -27,7 +27,7 @@ const ConfigurarDiasHorarios = () => {
   // Função para buscar horários ao carregar o componente
   useEffect(() => {
     if (turmaId) {
-      api.get(`http://localhost:5001/turmas/${turmaId}/horarios`)
+      api.get(`/turmas/${turmaId}/horarios`)
         .then((response) => {
           const horariosSalvos = response.data;
           console.log('Horários salvos:', horariosSalvos);  // Verifique se os dados chegam aqui
@@ -113,7 +113,7 @@ const ConfigurarDiasHorarios = () => {
       }))
     );
 
-    api.post(`http://localhost:5001/turmas/${turmaId}/horarios`, { horarios: horariosFormatados })
+    api.post(`/turmas/${turmaId}/horarios`, { horarios: horariosFormatados })
       .then(() => navigate('/turmas')) // Navega de volta para a página de turmas
       .catch((error) => console.error('Erro ao salvar horários:', error));
   };

@@ -15,7 +15,7 @@ const ModalRegistrarPagamento = ({ open, handleClose, mensalidadeId, recarregarM
       return;
     }
 
-    api.post('http://localhost:5001/pagamentos', {
+    api.post('/pagamentos', {
       mensalidade_id: mensalidadeId,
       data_pagamento: dataPagamento,
       valor_pago: valorPago,

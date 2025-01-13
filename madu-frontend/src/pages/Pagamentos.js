@@ -7,7 +7,7 @@ const Pagamentos = () => {
 
   // Função para carregar os pagamentos
   useEffect(() => {
-    api.get('http://localhost:5001/pagamentos')
+    api.get('/pagamentos')
       .then(response => {
         setPagamentos(response.data); // Atualiza o estado com os dados dos pagamentos
       })

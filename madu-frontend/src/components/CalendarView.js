@@ -16,7 +16,7 @@ const CalendarView = () => {
   const [newTime, setNewTime] = useState('');
 
   const fetchEvents = () => {
-    api.get('http://localhost:5001/aulas')
+    api.get('/aulas')
       .then((response) => {
         const aulas = response.data.map(aula => ({
           id: aula.id,
@@ -54,7 +54,7 @@ const CalendarView = () => {
     const updatedStart = moment.tz(`${newDate}T${newTime}:00`, 'America/Sao_Paulo').format('YYYY-MM-DD HH:mm:ss');
     const updatedEnd = moment.tz(`${newDate}T${newTime}:00`, 'America/Sao_Paulo').add(1, 'hour').format('YYYY-MM-DD HH:mm:ss');
 
-    api.put(`http://localhost:5001/aulas/${selectedEvent.id}`, {
+    api.put(`/aulas/${selectedEvent.id}`, {
       start: updatedStart,
       end_time: updatedEnd
     })
@@ -80,7 +80,7 @@ const CalendarView = () => {
             start: moment.tz(info.event.start, 'America/Sao_Paulo').format('YYYY-MM-DD HH:mm:ss'),
             end: moment.tz(new Date(info.event.start.getTime() + 60 * 60 * 1000), 'America/Sao_Paulo').format('YYYY-MM-DD HH:mm:ss')
           };
-          api.put(`http://localhost:5001/aulas/${updatedEvent.id}`, {
+          api.put(`/aulas/${updatedEvent.id}`, {
             start: updatedEvent.start,
             end_time: updatedEvent.end
           })

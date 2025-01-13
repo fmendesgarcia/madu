@@ -37,7 +37,7 @@ const AlunoForm = () => {
 
   useEffect(() => {
     if (id) {
-      api.get(`http://localhost:5001/alunos/${id}`)
+      api.get(`/alunos/${id}`)
         .then((response) => {
           const aluno = response.data;
   
@@ -47,8 +47,8 @@ const AlunoForm = () => {
           }
   
           setForm(aluno);
-          setFotoPreview(aluno.foto ? `http://localhost:5001/${aluno.foto}` : null);
-          setContratoLink(aluno.contrato ? `http://localhost:5001/${aluno.contrato}` : null);
+          setFotoPreview(aluno.foto ? `/${aluno.foto}` : null);
+          setContratoLink(aluno.contrato ? `/${aluno.contrato}` : null);
         })
         .catch((error) => console.error('Erro ao buscar aluno:', error));
     }
@@ -109,14 +109,14 @@ const AlunoForm = () => {
   
     if (id) {
       // Atualizar aluno existente
-      api.put(`http://localhost:5001/alunos/${id}`, formData, {
+      api.put(`/alunos/${id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
         .then(() => navigate('/alunos'))
         .catch((error) => console.error('Erro ao atualizar aluno:', error));
     } else {
       // Adicionar novo aluno
-      api.post('http://localhost:5001/alunos', formData, {
+      api.post('/alunos', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
         .then(() => navigate('/alunos'))
