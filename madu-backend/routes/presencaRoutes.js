@@ -134,6 +134,7 @@ router.get('/aulas/:aula_id/presencas', async (req, res) => {
           au.id = $1;
     `;
 
+    //ok
     const values = [aula_id];
     const result = await pool.query(query, values);
 
