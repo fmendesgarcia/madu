@@ -13,6 +13,9 @@
 
 # misc
 .env
+madu-backend/.env
+madu-frontend/.env
+
 .DS_Store
 .env.local
 .env.development.local
