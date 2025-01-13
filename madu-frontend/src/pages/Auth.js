@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Importa o hook para redirecionar
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import {
   Box,
@@ -7,29 +7,39 @@ import {
   TextField,
   Typography,
   Paper,
+  CircularProgress,
 } from '@mui/material';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const navigate = useNavigate(); // Hook para redirecionamento
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Redireciona se o usuário já estiver logado
+    const token = localStorage.getItem('token');
+    if (token) {
+      navigate('/dashboard');
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
     try {
-      const response = await api.post('/auth/login', {
-        email,
-        password,
-      });
-
-      // Salva o token no localStorage
+      const response = await api.post('/auth/login', { email, password });
       localStorage.setItem('token', response.data.token);
-
-      // Redireciona para a página inicial após o login
-      navigate('/dashboard'); // Substitua "/dashboard" pela rota desejada
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      navigate('/dashboard');
     } catch (err) {
-      setError('E-mail ou senha inválidos!');
+      const errorMessage =
+        err.response?.data?.message || 'Erro ao realizar login. Tente novamente.';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -86,8 +96,9 @@ const Auth = () => {
             variant="contained"
             fullWidth
             sx={{ mt: 2 }}
+            disabled={loading}
           >
-            Entrar
+            {loading ? <CircularProgress size={24} color="inherit" /> : 'Entrar'}
           </Button>
         </Box>
       </Paper>
