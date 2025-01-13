@@ -47,8 +47,8 @@ const AlunoForm = () => {
           }
   
           setForm(aluno);
-          setFotoPreview(aluno.foto ? `/${aluno.foto}` : null);
-          setContratoLink(aluno.contrato ? `/${aluno.contrato}` : null);
+          setFotoPreview(aluno.foto ? `${api.defaults.baseURL}/${aluno.foto}` : null);
+          setContratoLink(aluno.contrato ? `${api.defaults.baseURL}/${aluno.contrato}` : null);
         })
         .catch((error) => console.error('Erro ao buscar aluno:', error));
     }

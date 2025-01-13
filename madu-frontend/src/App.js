@@ -20,25 +20,56 @@ import GerenciarLancamentos from './pages/Lancamentos';
 import ConfigurarDiasHorarios from './pages/ConfigurarDiasHorarios';
 import MenuLateral from './components/MenuLateral';
 import { Box, CssBaseline } from '@mui/material';
+import api from './services/api';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(null); // Inicial como null
+
+
   const location = useLocation(); // Hook para verificar a rota atual
 
   useEffect(() => {
-    // Verifica se o token existe no localStorage
-    const token = localStorage.getItem('token');
-    setIsAuthenticated(!!token);
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const response = await api.get('/auth/validate-token', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setIsAuthenticated(response.data.valid);
+        } catch (error) {
+          console.error('Erro ao validar o token:', error);
+          setIsAuthenticated(false);
+          localStorage.removeItem('token');
+        }
+      } else {
+        setIsAuthenticated(false);
+      }
+    };
+  
+    checkAuth();
   }, []);
+  
+  useEffect(() => {
+    console.log('Estado de isAuthenticated:', isAuthenticated);
+  }, [isAuthenticated]);
+  
+  
+  
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    setIsAuthenticated(false);
+    localStorage.removeItem('token'); // Remove o token
+    localStorage.removeItem('user');  // Remove os dados do usuário
+    setIsAuthenticated(false);        // Atualiza o estado de autenticação
   };
 
   const PrivateRoute = ({ element }) => {
+    if (isAuthenticated === null) {
+      return <div>Carregando...</div>; // Mostra um estado de carregamento
+    }
     return isAuthenticated ? element : <Navigate to="/login" />;
   };
+  
 
   return (
     <Box sx={{ display: 'flex' }}>
