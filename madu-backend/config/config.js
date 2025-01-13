@@ -6,12 +6,14 @@ const { Pool } = require('pg');
 
 
 const pool = new Pool({
-  user: process.env.DB_USER,       // Usuário do banco de dados
-  host: process.env.DB_HOST,       // Endereço do banco de dados (localhost ou outro)
-  database: process.env.DB_NAME,   // Nome do banco de dados
-  password: process.env.DB_PASS,   // Senha do banco de dados
-  port: process.env.DB_PORT || 5432, // Porta do banco de dados (5432 por padrão)
+  user: process.env.DB_USER || 'default_user',
+  host: process.env.DB_HOST || 'localhost',
+  database: process.env.DB_NAME || 'default_db',
+  password: process.env.DB_PASS || 'default_password',
+  port: process.env.DB_PORT || 5432,
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
 });
+
 
 // Função para verificar a conexão com o banco
 pool.connect((err, client, release) => {
