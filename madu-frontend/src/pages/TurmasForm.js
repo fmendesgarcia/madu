@@ -6,28 +6,27 @@ import FormInput from '../components/FormInput';
 import FormSelect from '../components/FormSelect';
 
 const modalidadeOptions = [
-  { value: 'Ballet', label: 'Ballet' },
   { value: 'Ballet - baby', label: 'Ballet - Baby' },
   { value: 'Ballet - infantil', label: 'Ballet - Infantil' },
   { value: 'Ballet - juvenil', label: 'Ballet - Juvenil' },
   { value: 'Ballet - adulto', label: 'Ballet - Adulto' },
-  { value: 'Jazz', label: 'Jazz' },
+  { value: 'Boom dance', label: 'Boom Dance' },
+  { value: 'Contemporâneo', label: 'Contemporâneo' },
+  { value: 'Heels', label: 'Heels' },
+  { value: 'Hip Hop', label: 'Hip Hop' },
   { value: 'Jazz - infantil', label: 'Jazz - Infantil' },
   { value: 'Jazz - grupinho', label: 'Jazz - Grupinho' },
   { value: 'Jazz - adulto', label: 'Jazz - Adulto' },
-  { value: 'Boom dance', label: 'Boom Dance' },
-  { value: 'Movimento', label: 'Movimento' },
   { value: 'Jazz Funk', label: 'Jazz Funk' },
-  { value: 'Yoga', label: 'Yoga' },
-  { value: 'Hip Hop', label: 'Hip Hop' },
-  { value: 'Heels', label: 'Heels' },
+  { value: 'Kpop infantil', label: 'Kpop Infantil' },
+  { value: 'Kpop adulto', label: 'Kpop Adulto' },
+  { value: 'Movimento', label: 'Movimento' },
   { value: 'Pilates', label: 'Pilates' },
   { value: 'Teatro infantil', label: 'Teatro Infantil' },
   { value: 'Teatro juvenil', label: 'Teatro Juvenil' },
-  { value: 'Kpop infantil', label: 'Kpop Infantil' },
-  { value: 'Kpop adulto', label: 'Kpop Adulto' },
-  { value: 'Contemporâneo', label: 'Contemporâneo' },
+  { value: 'Yoga', label: 'Yoga' },
 ];
+
 
 
 const tipoOptions = [
