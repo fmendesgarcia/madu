@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import InputMask from 'react-input-mask';
 import api from '../services/api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Box, Button, TextField } from '@mui/material';
@@ -118,19 +119,27 @@ const ProfessorForm = () => {
       <FormInput label="Apelido" name="apelido" value={form.apelido} onChange={handleChange} required />
       <FormInput label="Email" name="email" value={form.email} onChange={handleChange} type="email" required />
       <FormSelect label="Sexo" name="sexo" value={form.sexo} onChange={handleChange} options={sexoOptions} required />
-      <FormInput label="Telefone" name="telefone" value={form.telefone} onChange={handleChange} required />
-      <FormInput label="CPF" name="cpf" value={form.cpf} onChange={handleChange} required />
 
-      {/* Campo de Data de Nascimento com suporte para pt-BR */}
-      <DatePicker
-        selected={form.data_nascimento}
-        onChange={handleDateChange}
-        dateFormat="dd/MM/yyyy"
-        locale={ptBR}
-        customInput={<TextField label="Data de Nascimento" fullWidth required />}
-      />
+      {/* Telefone com Máscara */}
+      <InputMask mask="(99) 99999-9999" value={form.telefone} onChange={handleChange}>
+        {(inputProps) => <TextField {...inputProps} label="Telefone" name="telefone" required />}
+      </InputMask>
 
-      <FormInput label="CNPJ" name="cnpj" value={form.cnpj} onChange={handleChange} required />
+      {/* CPF com Máscara */}
+      <InputMask mask="999.999.999-99" value={form.cpf} onChange={handleChange}>
+        {(inputProps) => <TextField {...inputProps} label="CPF" name="cpf" required />}
+      </InputMask>
+
+      {/* Data de Nascimento com Máscara */}
+      <InputMask mask="99/99/9999" value={form.data_nascimento} onChange={handleChange}>
+        {(inputProps) => <TextField {...inputProps} label="Data de Nascimento" name="data_nascimento" required />}
+      </InputMask>
+
+      {/* CNPJ com Máscara */}
+      <InputMask mask="99.999.999/0001-99" value={form.cnpj} onChange={handleChange}>
+        {(inputProps) => <TextField {...inputProps} label="CNPJ" name="cnpj" />}
+      </InputMask>
+
       <FormInput label="Endereço" name="endereco" value={form.endereco} onChange={handleChange} required />
       <FormInput label="Cidade" name="cidade" value={form.cidade} onChange={handleChange} required />
       <FormInput label="Estado" name="estado" value={form.estado} onChange={handleChange} required />
