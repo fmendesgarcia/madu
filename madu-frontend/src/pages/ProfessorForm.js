@@ -39,15 +39,21 @@ const ProfessorForm = () => {
 
   useEffect(() => {
     if (id) {
-      api.get(`/professores/${id}`)
-        .then((response) => {
-          const data = response.data;
-          data.data_nascimento = data.data_nascimento ? new Date(data.data_nascimento) : null;
-          setForm(data);
-        })
-        .catch((error) => console.error('Erro ao buscar professor:', error));
+        api.get(`/professores/${id}`)
+            .then((response) => {
+                const data = response.data;
+                
+                if (data.data_nascimento) {
+                    const dateObj = new Date(data.data_nascimento);
+                    data.data_nascimento = dateObj.toLocaleDateString('pt-BR'); // dd/mm/yyyy
+                }
+
+                setForm(data);
+            })
+            .catch((error) => console.error('Erro ao buscar professor:', error));
     }
-  }, [id]);
+}, [id]);
+
 
 
   const handleRemoveFile = (fileType) => {
@@ -62,30 +68,37 @@ const ProfessorForm = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const formData = new FormData();
-  
-    // Adiciona todos os campos ao FormData
+
     Object.keys(form).forEach((key) => {
-      if (key === 'data_nascimento' && form.data_nascimento) {
-        formData.append('data_nascimento', form.data_nascimento.toISOString().split('T')[0]); // Formata a data de nascimento
-      } else if (key === 'dia_pagamento') {
-        formData.append('dia_pagamento', parseInt(form.dia_pagamento, 10)); // Garante que dia_pagamento é um número inteiro
-      } else if (form[key] !== null && form[key] !== undefined) {
-        formData.append(key, form[key]);
-      }
+        if (key === 'data_nascimento' && form.data_nascimento) {
+            let formattedDate = form.data_nascimento;
+            
+            // Converte apenas se não for um Date
+            if (!(formattedDate instanceof Date)) {
+                const [day, month, year] = formattedDate.split('/');
+                formattedDate = new Date(`${year}-${month}-${day}T00:00:00`);
+            }
+
+            formData.append('data_nascimento', formattedDate.toISOString().split('T')[0]);
+        } else if (key === 'dia_pagamento') {
+            formData.append('dia_pagamento', parseInt(form.dia_pagamento, 10));
+        } else if (form[key] !== null && form[key] !== undefined) {
+            formData.append(key, form[key]);
+        }
     });
-  
+
     const request = id
-      ? api.put(`/professores/${id}`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+        ? api.put(`/professores/${id}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
         })
-      : api.post('/professores', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+        : api.post('/professores', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
         });
-  
+
     request
-      .then(() => navigate('/professores'))
-      .catch((error) => console.error('Erro ao adicionar/atualizar professor:', error));
-  };
+        .then(() => navigate('/professores'))
+        .catch((error) => console.error('Erro ao adicionar/atualizar professor:', error));
+};
   
 
   const handleChange = (e) => {
