@@ -15,7 +15,7 @@ router.post('/', async (req, res) => {
     const result = await pool.query(query, values);
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Erro ao criar aula:', error);
+    console.error('Erro ao criar a aula:', error);
     res.status(400).json({ error: error.message });
   }
 });
