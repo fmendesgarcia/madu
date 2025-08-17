@@ -27,22 +27,21 @@ const deleteFile = (filePath) => {
 // Rota para criar um novo aluno com upload de foto e contrato
 router.post('/', upload.fields([{ name: 'foto', maxCount: 1 }, { name: 'contrato', maxCount: 1 }]), async (req, res) => {
   try {
-    const { nome, sexo, data_nascimento, telefone, cpf, email, responsavel_financeiro, bolsista, endereco, cidade, estado } = req.body;
+    const { codigo, nome, sexo, data_nascimento, telefone, cpf, email, responsavel_financeiro, bolsista, endereco, cidade, estado, responsavel_nome, responsavel_cpf, responsavel_telefone, responsavel_email, responsavel_parentesco } = req.body;
     
-    // Captura o caminho correto para foto e contrato
     const foto = req.files['foto'] ? `uploads/${req.files['foto'][0].filename}` : null;
     const contrato = req.files['contrato'] ? `uploads/${req.files['contrato'][0].filename}` : null;
     
     const query = `
-      INSERT INTO alunos (nome, sexo, data_nascimento, telefone, cpf, email, responsavel_financeiro, bolsista, endereco, cidade, estado, foto, contrato)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      INSERT INTO alunos (codigo, nome, sexo, data_nascimento, telefone, cpf, email, responsavel_financeiro, bolsista, endereco, cidade, estado, foto, contrato, responsavel_nome, responsavel_cpf, responsavel_telefone, responsavel_email, responsavel_parentesco)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
       RETURNING *;
     `;
     
-    const values = [nome, sexo, data_nascimento, telefone, cpf, email, responsavel_financeiro, bolsista, endereco, cidade, estado, foto, contrato];
+    const values = [codigo || null, nome, sexo, data_nascimento, telefone, cpf, email, responsavel_financeiro, bolsista, endereco, cidade, estado, foto, contrato, responsavel_nome, responsavel_cpf, responsavel_telefone, responsavel_email, responsavel_parentesco];
     
     const result = await pool.query(query, values);
-    res.status(201).json(result.rows[0]); // Retorna o aluno criado
+    res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Erro ao criar aluno:', error);
     res.status(400).json({ error: error.message });
@@ -53,7 +52,7 @@ router.post('/', upload.fields([{ name: 'foto', maxCount: 1 }, { name: 'contrato
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM alunos ORDER BY nome ASC;');
-    res.json(result.rows); // Retorna a lista de alunos
+    res.json(result.rows);
   } catch (error) {
     console.error('Erro ao listar alunos:', error);
     res.status(500).json({ error: error.message });
@@ -80,41 +79,36 @@ router.get('/:id', async (req, res) => {
 // Rota para atualizar um aluno com upload de foto e contrato
 router.put('/:id', upload.fields([{ name: 'foto', maxCount: 1 }, { name: 'contrato', maxCount: 1 }]), async (req, res) => {
   try {
-    const { nome, sexo, data_nascimento, telefone, cpf, email, responsavel_financeiro, bolsista, endereco, cidade, estado, fotoRemovida, contratoRemovido } = req.body;
+    const { codigo, nome, sexo, data_nascimento, telefone, cpf, email, responsavel_financeiro, bolsista, endereco, cidade, estado, fotoRemovida, contratoRemovido, responsavel_nome, responsavel_cpf, responsavel_telefone, responsavel_email, responsavel_parentesco } = req.body;
     
     let foto = req.files['foto'] ? `uploads/${req.files['foto'][0].filename}` : null;
     let contrato = req.files['contrato'] ? `uploads/${req.files['contrato'][0].filename}` : null;
     
-    // Busca o aluno atual para saber se há foto ou contrato existentes
     const resultAtual = await pool.query('SELECT foto, contrato FROM alunos WHERE id = $1;', [req.params.id]);
     const alunoAtual = resultAtual.rows[0];
     
-    // Se a foto foi removida, excluir a foto existente e definir como null
     if (fotoRemovida === 'true' && alunoAtual.foto) {
       deleteFile(alunoAtual.foto);
       foto = null;
     } else if (!foto) {
-      // Se não foi enviado um novo arquivo de foto, manter o caminho da foto atual
       foto = alunoAtual.foto;
     }
 
-    // Se o contrato foi removido, excluir o contrato existente e definir como null
     if (contratoRemovido === 'true' && alunoAtual.contrato) {
       deleteFile(alunoAtual.contrato);
       contrato = null;
     } else if (!contrato) {
-      // Se não foi enviado um novo arquivo de contrato, manter o caminho do contrato atual
       contrato = alunoAtual.contrato;
     }
     
     const query = `
       UPDATE alunos
-      SET nome = $1, sexo = $2, data_nascimento = $3, telefone = $4, cpf = $5, email = $6, responsavel_financeiro = $7, bolsista = $8, endereco = $9, cidade = $10, estado = $11, foto = $12, contrato = $13, updated_at = NOW()
-      WHERE id = $14
+      SET codigo = $1, nome = $2, sexo = $3, data_nascimento = $4, telefone = $5, cpf = $6, email = $7, responsavel_financeiro = $8, bolsista = $9, endereco = $10, cidade = $11, estado = $12, foto = $13, contrato = $14, responsavel_nome = $15, responsavel_cpf = $16, responsavel_telefone = $17, responsavel_email = $18, responsavel_parentesco = $19, updated_at = NOW()
+      WHERE id = $20
       RETURNING *;
     `;
     
-    const values = [nome, sexo, data_nascimento, telefone, cpf, email, responsavel_financeiro, bolsista, endereco, cidade, estado, foto, contrato, req.params.id];
+    const values = [codigo || null, nome, sexo, data_nascimento, telefone, cpf, email, responsavel_financeiro, bolsista, endereco, cidade, estado, foto, contrato, responsavel_nome, responsavel_cpf, responsavel_telefone, responsavel_email, responsavel_parentesco, req.params.id];
     
     const result = await pool.query(query, values);
     const alunoAtualizado = result.rows[0];
@@ -129,8 +123,6 @@ router.put('/:id', upload.fields([{ name: 'foto', maxCount: 1 }, { name: 'contra
     res.status(400).json({ error: error.message });
   }
 });
-
-
 
 // Rota para deletar um aluno
 router.delete('/:id', async (req, res) => {

@@ -2,6 +2,73 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/config'); // Conexão com PostgreSQL
 
+function diaPtBrParaJsIndex(dia) {
+  const map = {
+    'Domingo': 0,
+    'Segunda': 1,
+    'Terça': 2,
+    'Terca': 2,
+    'Quarta': 3,
+    'Quinta': 4,
+    'Sexta': 5,
+    'Sábado': 6,
+    'Sabado': 6,
+  };
+  return map[dia] ?? -1;
+}
+
+async function gerarAulasParaTurma(turmaId, horarios, diasAdiante = 90) {
+  // Limpa aulas futuras planejadas para evitar duplicidade
+  await pool.query(
+    "DELETE FROM aulas WHERE turma_id = $1 AND start >= CURRENT_DATE AND COALESCE(status, 'planejada') = 'planejada'",
+    [turmaId]
+  );
+
+  // Buscar nome da turma para preencher o title
+  const turmaRes = await pool.query('SELECT nome FROM turmas WHERE id = $1', [turmaId]);
+  const turmaNome = turmaRes.rows[0]?.nome || 'Aula';
+
+  const hoje = new Date();
+  const fim = new Date();
+  fim.setDate(fim.getDate() + diasAdiante);
+
+  // Pre-processa horários por índice de dia
+  const horariosPorDia = new Map();
+  for (const h of horarios) {
+    const idx = diaPtBrParaJsIndex(h.dia_da_semana);
+    if (idx < 0) continue;
+    if (!horariosPorDia.has(idx)) horariosPorDia.set(idx, []);
+    horariosPorDia.get(idx).push(h.horario);
+  }
+
+  const inserts = [];
+  for (
+    let d = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    d <= fim;
+    d.setDate(d.getDate() + 1)
+  ) {
+    const idx = d.getDay();
+    const horariosDia = horariosPorDia.get(idx);
+    if (!horariosDia || horariosDia.length === 0) continue;
+
+    for (const hhmm of horariosDia) {
+      const [hh, mm] = (hhmm || '').split(':').map((x) => parseInt(x, 10));
+      if (isNaN(hh) || isNaN(mm)) continue;
+      const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, mm, 0);
+      const end = new Date(start.getTime() + 60 * 60 * 1000);
+      inserts.push({ start, end });
+    }
+  }
+
+  const query = `
+    INSERT INTO aulas (turma_id, title, start, end_time, status)
+    VALUES ($1, $2, $3, $4, 'planejada')
+  `;
+  for (const aula of inserts) {
+    await pool.query(query, [turmaId, turmaNome, aula.start, aula.end]);
+  }
+}
+
 // Rota para criar uma nova turma
 router.post('/', async (req, res) => {
   try {
@@ -46,10 +113,13 @@ router.post('/:turmaId/horarios', async (req, res) => {
     // Obter os horários antigos da turma
     const horariosExistentes = await pool.query('SELECT * FROM horarios_turma WHERE turma_id = $1;', [turmaId]);
 
-    // Primeiro, remover as aulas associadas aos horários que serão deletados
+    // Primeiro, remover as aulas associadas aos horários antigos (se existir coluna horario_id no seu schema)
     for (const horario of horariosExistentes.rows) {
-      await pool.query('DELETE FROM aulas WHERE horario_id = $1;', [horario.id]);
-      console.log(`Aulas associadas ao horário ${horario.id} foram removidas.`);
+      try {
+        await pool.query('DELETE FROM aulas WHERE horario_id = $1;', [horario.id]);
+      } catch (_) {
+        // ignora se a coluna não existir no schema atual
+      }
     }
 
     // Agora podemos remover os horários antigos
@@ -62,19 +132,16 @@ router.post('/:turmaId/horarios', async (req, res) => {
     `;
 
     for (const horario of horarios) {
-      console.log('Processando horário:', horario);
-
       if (!horario.dia_da_semana || !horario.horario) {
-        console.log('Erro: Faltando dados para o horário:', horario);
         return res.status(400).json({ message: 'Todos os horários devem ter dia_da_semana e horário' });
       }
-
       await pool.query(queryHorarios, [turmaId, horario.dia_da_semana, horario.horario]);
-
-      console.log(`Query executada com sucesso para turmaId ${turmaId} e horário: ${horario.dia_da_semana} - ${horario.horario}`);
     }
 
-    res.status(200).json({ message: 'Horários atualizados com sucesso' });
+    // Gerar aulas futuras com base nos novos horários (90 dias)
+    await gerarAulasParaTurma(turmaId, horarios, 90);
+
+    res.status(200).json({ message: 'Horários e aulas futuras atualizados com sucesso' });
   } catch (error) {
     console.error('Erro ao atualizar horários da turma:', error);
     res.status(500).json({ error: error.message });

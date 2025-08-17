@@ -1,17 +1,19 @@
-require('dotenv').config({ path: './madu-backend/.env' });
+require('dotenv').config({ path: './env.local' });
 
 const { Pool } = require('pg');
 
-// Configuração do pool de conexões com o PostgreSQL
-
+// Configuração do pool de conexões com o PostgreSQL Neon
 
 const pool = new Pool({
-  user: process.env.DB_USER || 'default_user',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'default_db',
-  password: process.env.DB_PASS || 'default_password',
+  user: process.env.DB_USER || 'dbmanu_owner',
+  host: process.env.DB_HOST || 'ep-plain-truth-a51i94ih.us-east-2.aws.neon.tech',
+  database: process.env.DB_NAME || 'dbmanu',
+  password: process.env.DB_PASS || '4xjSQcgX9zbN',
   port: process.env.DB_PORT || 5432,
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+  ssl: {
+    rejectUnauthorized: false,
+    sslmode: 'require'
+  },
 });
 
 

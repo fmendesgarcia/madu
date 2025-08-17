@@ -1,45 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
-import { Table, TableHead, TableBody, TableRow, TableCell, Button, Select, MenuItem, FormControl, InputLabel, Modal, TextField } from '@mui/material';
+import { Table, TableHead, TableBody, TableRow, TableCell, Button, Select, MenuItem, FormControl, InputLabel, Modal, TextField, Box, InputAdornment, IconButton } from '@mui/material';
 import { useNavigate } from 'react-router-dom'; // Para navegação
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
+
+const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 const GerenciarMensalidades = () => {
-  const [mensalidades, setMensalidades] = useState([]);
-  const [statusFilter, setStatusFilter] = useState('Todos'); // Filtro de status com "Todos" como padrão
-  const [mesFilter, setMesFilter] = useState('Todos'); // Filtro de mês com "Todos" como padrão
-  const [anoFilter, setAnoFilter] = useState('Todos'); // Filtro de ano com "Todos" como padrão
-  const [modalOpen, setModalOpen] = useState(false); // Estado para abrir/fechar o modal
-  const [mensalidadeSelecionada, setMensalidadeSelecionada] = useState(null); // Armazena a mensalidade selecionada para o pagamento
-  const [dataPagamento, setDataPagamento] = useState(''); // Data de pagamento no modal
-  const [valorPago, setValorPago] = useState(''); // Valor pago no modal
-  const [formaPagamento, setFormaPagamento] = useState(''); // Forma de pagamento no modal
-  const navigate = useNavigate(); // Hook para navegação
+  const now = new Date();
+  const defaultMes = String(now.getMonth() + 1); // 1..12
+  const defaultAno = String(now.getFullYear());
 
-  // Carrega as mensalidades da API
+  const [mensalidades, setMensalidades] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('Todos');
+  const [mesFilter, setMesFilter] = useState(defaultMes);
+  const [anoFilter, setAnoFilter] = useState(defaultAno);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [groupBy, setGroupBy] = useState('nenhum'); // 'nenhum' | 'turma'
+  const [modalOpen, setModalOpen] = useState(false);
+  const [mensalidadeSelecionada, setMensalidadeSelecionada] = useState(null);
+  const [dataPagamento, setDataPagamento] = useState('');
+  const [valorPago, setValorPago] = useState('');
+  const [formaPagamento, setFormaPagamento] = useState('');
+  const navigate = useNavigate();
+
   useEffect(() => {
     api.get('/mensalidades')
       .then(response => {
-        console.log('Dados recebidos do backend:', response); // Verifique os dados completos
         setMensalidades(response.data);
       })
       .catch(error => console.error('Erro ao buscar mensalidades:', error));
   }, []);
 
-  // Função para filtrar pelo status, mês e ano
-  const handleStatusFilterChange = (event) => {
-    setStatusFilter(event.target.value);
-  };
-
-  const handleMesFilterChange = (event) => {
-    setMesFilter(event.target.value);
-  };
-
-  const handleAnoFilterChange = (event) => {
-    setAnoFilter(event.target.value);
-  };
+  const handleStatusFilterChange = (event) => setStatusFilter(event.target.value);
+  const handleMesFilterChange = (event) => setMesFilter(event.target.value);
+  const handleAnoFilterChange = (event) => setAnoFilter(event.target.value);
 
   const registrarPagamento = () => {
     if (!dataPagamento || !valorPago || !formaPagamento) {
@@ -53,8 +52,7 @@ const GerenciarMensalidades = () => {
       valor_pago: valorPago,
       forma_pagamento: formaPagamento
     })
-    .then(response => {
-      console.log('Pagamento registrado:', response.data);
+    .then(() => {
       carregarMensalidades();
       fecharModal();
     })
@@ -64,11 +62,12 @@ const GerenciarMensalidades = () => {
     });
   };
 
-  const abrirModalPagamento = (mensalidadeId) => {
-    setMensalidadeSelecionada(mensalidadeId);
+  const abrirModalPagamento = (mensalidade) => {
+    const hoje = new Date().toISOString().split('T')[0];
+    setMensalidadeSelecionada(mensalidade.id);
     setModalOpen(true);
-    setDataPagamento('');
-    setValorPago('');
+    setDataPagamento(hoje);
+    setValorPago(mensalidade.valor);
     setFormaPagamento('');
   };
 
@@ -82,15 +81,10 @@ const GerenciarMensalidades = () => {
 
   const carregarMensalidades = () => {
     api.get('/mensalidades')
-      .then(response => {
-        setMensalidades(response.data);
-      })
-      .catch(error => {
-        console.error('Erro ao buscar mensalidades:', error);
-      });
+      .then(response => setMensalidades(response.data))
+      .catch(error => console.error('Erro ao buscar mensalidades:', error));
   };
 
-  // Função para estilizar o status
   const renderStatus = (status) => {
     if (status === 'pago') {
       return (
@@ -120,21 +114,47 @@ const GerenciarMensalidades = () => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, '0'); // Garante dois dígitos para o dia
-    const month = String(date.getMonth() + 1).padStart(2, '0'); // Garante dois dígitos para o mês
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
-    return `${day}/${month}/${year}`; // Formato dd/mm/yyyy
+    return `${day}/${month}/${year}`;
   };
+
+  const filteredMensalidades = useMemo(() => {
+    return mensalidades
+      .filter(m => (statusFilter === 'Todos' || m.status === statusFilter))
+      .filter(m => (mesFilter === 'Todos' || new Date(m.data_vencimento).getMonth() + 1 === parseInt(mesFilter)))
+      .filter(m => (anoFilter === 'Todos' || new Date(m.data_vencimento).getFullYear() === parseInt(anoFilter)))
+      .filter(m => {
+        if (!searchTerm.trim()) return true;
+        const q = searchTerm.toLowerCase();
+        return (
+          (m.aluno_nome || '').toLowerCase().includes(q) ||
+          (m.turmas_nomes || '').toLowerCase().includes(q)
+        );
+      });
+  }, [mensalidades, statusFilter, mesFilter, anoFilter, searchTerm]);
+
+  const groupedByTurma = useMemo(() => {
+    if (groupBy !== 'turma') return null;
+    const map = new Map();
+    for (const m of filteredMensalidades) {
+      const turmaKey = m.turmas_nomes || 'Sem turma';
+      if (!map.has(turmaKey)) map.set(turmaKey, []);
+      map.get(turmaKey).push(m);
+    }
+    return map;
+  }, [filteredMensalidades, groupBy]);
 
   return (
     <div>
       <h2>Gerenciar Mensalidades</h2>
 
-      {/* Filtros */}
-      <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
-        <FormControl>
+      {/* Filtros e busca */}
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
+        <FormControl sx={{ minWidth: 160 }}>
           <InputLabel>Status</InputLabel>
-          <Select value={statusFilter} onChange={handleStatusFilterChange}>
+          <Select value={statusFilter} label="Status" onChange={handleStatusFilterChange}>
             <MenuItem value="Todos">Todos</MenuItem>
             <MenuItem value="pago">Pago</MenuItem>
             <MenuItem value="pendente">Pendente</MenuItem>
@@ -142,73 +162,129 @@ const GerenciarMensalidades = () => {
           </Select>
         </FormControl>
 
-        <FormControl>
+        <FormControl sx={{ minWidth: 160 }}>
           <InputLabel>Mês</InputLabel>
-          <Select value={mesFilter} onChange={handleMesFilterChange}>
+          <Select value={mesFilter} label="Mês" onChange={handleMesFilterChange}>
             <MenuItem value="Todos">Todos</MenuItem>
-            <MenuItem value="1">Janeiro</MenuItem>
-            <MenuItem value="2">Fevereiro</MenuItem>
-            <MenuItem value="3">Março</MenuItem>
-            <MenuItem value="4">Abril</MenuItem>
-            <MenuItem value="5">Maio</MenuItem>
-            <MenuItem value="6">Junho</MenuItem>
-            <MenuItem value="7">Julho</MenuItem>
-            <MenuItem value="8">Agosto</MenuItem>
-            <MenuItem value="9">Setembro</MenuItem>
-            <MenuItem value="10">Outubro</MenuItem>
-            <MenuItem value="11">Novembro</MenuItem>
-            <MenuItem value="12">Dezembro</MenuItem>
+            {monthNames.map((label, idx) => (
+              <MenuItem key={idx + 1} value={String(idx + 1)}>{label}</MenuItem>
+            ))}
           </Select>
         </FormControl>
 
-        <FormControl>
+        <FormControl sx={{ minWidth: 160 }}>
           <InputLabel>Ano</InputLabel>
-          <Select value={anoFilter} onChange={handleAnoFilterChange}>
+          <Select value={anoFilter} label="Ano" onChange={handleAnoFilterChange}>
             <MenuItem value="Todos">Todos</MenuItem>
-            <MenuItem value="2022">2022</MenuItem>
-            <MenuItem value="2023">2023</MenuItem>
-            <MenuItem value="2024">2024</MenuItem>
+            {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map((y) => (
+              <MenuItem key={y} value={String(y)}>{y}</MenuItem>
+            ))}
           </Select>
         </FormControl>
-      </div>
+
+        <TextField
+          placeholder="Pesquisar por aluno ou turma..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+            endAdornment: searchTerm && (
+              <InputAdornment position="end">
+                <IconButton size="small" onClick={() => setSearchTerm('')}>
+                  <ClearIcon />
+                </IconButton>
+              </InputAdornment>
+            )
+          }}
+          sx={{ minWidth: 280 }}
+        />
+
+        <FormControl sx={{ minWidth: 160 }}>
+          <InputLabel>Agrupar por</InputLabel>
+          <Select value={groupBy} label="Agrupar por" onChange={(e) => setGroupBy(e.target.value)}>
+            <MenuItem value="nenhum">Nenhum</MenuItem>
+            <MenuItem value="turma">Turma</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
 
       {/* Tabela de mensalidades */}
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Aluno</TableCell>
-            <TableCell>Turmas</TableCell>
-            <TableCell>Data de Vencimento</TableCell>
-            <TableCell>Valor</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell>Ações</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {mensalidades
-            .filter(mensalidade => 
-              (statusFilter === 'Todos' || mensalidade.status === statusFilter) &&
-              (mesFilter === 'Todos' || new Date(mensalidade.data_vencimento).getMonth() + 1 === parseInt(mesFilter)) &&
-              (anoFilter === 'Todos' || new Date(mensalidade.data_vencimento).getFullYear() === parseInt(anoFilter))
-            )
-            .map((mensalidade) => (
+      {groupBy === 'nenhum' && (
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Aluno</TableCell>
+              <TableCell>Turmas</TableCell>
+              <TableCell>Data de Vencimento</TableCell>
+              <TableCell>Valor</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Ações</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredMensalidades.map((mensalidade) => (
               <TableRow key={mensalidade.id}>
                 <TableCell>{mensalidade.aluno_nome}</TableCell>
-                <TableCell>{mensalidade.turmas_nomes}</TableCell> {/* Exibe as turmas concatenadas */}
-                <TableCell>{formatDate(mensalidade.data_vencimento)}</TableCell> {/* Formata a data corretamente */}
+                <TableCell>{mensalidade.turmas_nomes}</TableCell>
+                <TableCell>{formatDate(mensalidade.data_vencimento)}</TableCell>
                 <TableCell>{mensalidade.valor}</TableCell>
                 <TableCell>{renderStatus(mensalidade.status)}</TableCell>
                 <TableCell>
                   {mensalidade.status !== 'pago' && (
-                    <Button variant="contained" color="primary" onClick={() => abrirModalPagamento(mensalidade.id)}>
+                    <Button variant="contained" color="primary" onClick={() => abrirModalPagamento(mensalidade)}>
                       Registrar Pagamento
                     </Button>
                   )}
                 </TableCell>
               </TableRow>
             ))}
-        </TableBody>
-      </Table>
+          </TableBody>
+        </Table>
+      )}
+
+      {groupBy === 'turma' && (
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Turma</TableCell>
+              <TableCell>Aluno</TableCell>
+              <TableCell>Vencimento</TableCell>
+              <TableCell>Valor</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Ações</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {[...groupedByTurma.keys()].map((turma) => (
+              <React.Fragment key={turma}>
+                <TableRow style={{ backgroundColor: '#f5f5f5' }}>
+                  <TableCell colSpan={6} style={{ fontWeight: 'bold' }}>{turma}</TableCell>
+                </TableRow>
+                {groupedByTurma.get(turma).map((m) => (
+                  <TableRow key={m.id}>
+                    <TableCell>{/* vazio, turma já está no cabeçalho do grupo */}</TableCell>
+                    <TableCell>{m.aluno_nome}</TableCell>
+                    <TableCell>{formatDate(m.data_vencimento)}</TableCell>
+                    <TableCell>{m.valor}</TableCell>
+                    <TableCell>{renderStatus(m.status)}</TableCell>
+                    <TableCell>
+                      {m.status !== 'pago' && (
+                        <Button variant="contained" color="primary" onClick={() => abrirModalPagamento(m)}>
+                          Registrar Pagamento
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </React.Fragment>
+            ))}
+          </TableBody>
+        </Table>
+      )}
 
       {/* Modal para registrar pagamento */}
       <Modal open={modalOpen} onClose={fecharModal}>
@@ -220,7 +296,7 @@ const GerenciarMensalidades = () => {
           position: 'absolute', 
           top: '50%', 
           left: '50%', 
-          transform: 'translate(-50%, -50%)', // Centraliza o modal
+          transform: 'translate(-50%, -50%)', 
           boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)', 
           borderRadius: '8px' 
         }}>

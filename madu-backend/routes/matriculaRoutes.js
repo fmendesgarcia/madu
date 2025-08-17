@@ -34,22 +34,34 @@ const cancelarMensalidadesFuturas = async (matriculaId) => {
   }
 };
 
-// Função para gerar mensalidades
 // Função para gerar mensalidades e criar lançamentos de receitas futuras
 const gerarMensalidades = async (matriculaId, mensalidade, dataVencimento, dataFinalContrato, desconto = 0, isBolsista = false) => {
   const mensalidades = [];
-  let dataAtual = new Date(dataVencimento);
+
+  // Define dia alvo do vencimento (apenas o dia)
+  const dataBase = new Date(dataVencimento);
+  const diaVencimento = dataBase.getDate();
+
+  // Normaliza a data para o mês/ano base, garantindo dia válido no mês
+  let dataAtual = new Date(dataBase.getFullYear(), dataBase.getMonth(), 1);
+  const lastDayMesBase = new Date(dataAtual.getFullYear(), dataAtual.getMonth() + 1, 0).getDate();
+  dataAtual.setDate(Math.min(diaVencimento, lastDayMesBase));
 
   // Gera mensalidades até a data final do contrato
   while (dataAtual <= new Date(dataFinalContrato)) {
+    const valorFinal = isBolsista ? 0 : Number(mensalidade);
+
     mensalidades.push({
       matricula_id: matriculaId,
-      valor: isBolsista ? 0 : mensalidade - desconto,
+      valor: valorFinal,
       data_vencimento: new Date(dataAtual),
       status: 'pendente',
     });
 
-    dataAtual.setMonth(dataAtual.getMonth() + 1);
+    // Avança para o próximo mês, clampando o dia ao máximo do mês
+    dataAtual.setMonth(dataAtual.getMonth() + 1, 1); // vai para dia 1 do próximo mês
+    const lastDay = new Date(dataAtual.getFullYear(), dataAtual.getMonth() + 1, 0).getDate();
+    dataAtual.setDate(Math.min(diaVencimento, lastDay));
   }
 
   const mensalidadeQuery = `
@@ -58,7 +70,6 @@ const gerarMensalidades = async (matriculaId, mensalidade, dataVencimento, dataF
   `;
 
   for (const mensalidade of mensalidades) {
-    // Criação de lançamento de receita futura
     const lancamentoQuery = `
       INSERT INTO lancamentos (descricao, tipo, valor, data_lancamento, status)
       VALUES ('Receita futura mensalidade', 'receita', $1, $2, 'futura')
@@ -67,7 +78,6 @@ const gerarMensalidades = async (matriculaId, mensalidade, dataVencimento, dataF
     const lancamentoResult = await pool.query(lancamentoQuery, [mensalidade.valor, mensalidade.data_vencimento]);
     const lancamentoId = lancamentoResult.rows[0].id;
 
-    // Insere a mensalidade vinculada ao lançamento
     await pool.query(mensalidadeQuery, [
       matriculaId,
       mensalidade.valor,
@@ -78,6 +88,14 @@ const gerarMensalidades = async (matriculaId, mensalidade, dataVencimento, dataF
   }
 };
 
+const buildVencimentoDateFromDay = (dia, dataMatricula) => {
+  const base = dataMatricula ? new Date(dataMatricula) : new Date();
+  const ano = base.getFullYear();
+  const mes = base.getMonth();
+  const lastDay = new Date(ano, mes + 1, 0).getDate();
+  const diaClamped = Math.max(1, Math.min(parseInt(dia, 10), lastDay));
+  return new Date(ano, mes, diaClamped);
+};
 
 // Rota para criar uma nova matrícula e gerar mensalidades
 router.post('/', async (req, res) => {
@@ -85,7 +103,7 @@ router.post('/', async (req, res) => {
   try {
     const {
       aluno_id,
-      turmas_ids, // Array de IDs das turmas
+      turma_id, // única turma
       data_matricula,
       status,
       valor_matricula, // Novo campo
@@ -98,23 +116,31 @@ router.post('/', async (req, res) => {
 
     await client.query('BEGIN'); // Inicia a transação
 
-  // Recupera os valores das turmas selecionadas
-  const turmasQuery = `
-    SELECT valor_hora FROM turmas WHERE id = ANY($1::int[]);
+  // Normaliza data de vencimento caso venha apenas como dia (1-31)
+  const dataVencimentoNormalizada = (typeof data_vencimento === 'number' || /^(\d{1,2})$/.test(String(data_vencimento)))
+    ? buildVencimentoDateFromDay(data_vencimento, data_matricula)
+    : data_vencimento;
+
+  // Recupera o valor da turma selecionada
+  const turmaQuery = `
+    SELECT valor_hora FROM turmas WHERE id = $1;
   `;
-  const turmasResult = await client.query(turmasQuery, [turmas_ids]);
+  const turmaResult = await client.query(turmaQuery, [turma_id]);
 
-  // Converta os valores de valor_hora para números corretamente e some-os
-  const valoresTurmas = turmasResult.rows.map(turma => parseFloat(turma.valor_hora));
-  const valorTotalMensalidade = valoresTurmas.reduce((acc, valor) => acc + valor, 0);
+  if (turmaResult.rows.length === 0) {
+    throw new Error('Turma não encontrada');
+  }
 
-  // Aplique o desconto e verifique se o cálculo é válido
-  const mensalidadeFinal = valorTotalMensalidade - (desconto || 0);
+  const valorTurma = parseFloat(turmaResult.rows[0].valor_hora) || 0;
+
+  // Aplique o desconto como valor fixo (se informado)
+  const descontoNumero = parseFloat(desconto) || 0;
+  const mensalidadeFinal = valorTurma - descontoNumero;
   if (isNaN(mensalidadeFinal)) {
     throw new Error('Erro ao calcular a mensalidade: valor resultante é NaN');
   }
 
-  // Insira a matrícula no banco com o valor da mensalidade calculado corretamente
+  // Insira a matrícula
   const matriculaQuery = `
     INSERT INTO matriculas (aluno_id, data_matricula, status, mensalidade, valor_matricula, data_vencimento, data_final_contrato, desconto, isencao_taxa, bolsista)
     VALUES ($1, COALESCE($2, CURRENT_DATE), $3, $4, $5, $6, $7, $8, $9, $10)
@@ -122,13 +148,13 @@ router.post('/', async (req, res) => {
   `;
   const matriculaValues = [
     aluno_id,
-    data_matricula, // A data_matricula será a atual se não for informada
+    data_matricula,
     status || 'ativa',
-    mensalidadeFinal, // Usamos o valor total das turmas menos o desconto como a mensalidade
+    mensalidadeFinal,
     valor_matricula,
-    data_vencimento,
+    dataVencimentoNormalizada,
     data_final_contrato,
-    desconto || 0,
+    descontoNumero,
     isencao_taxa || false,
     bolsista || false,
   ];
@@ -138,40 +164,38 @@ router.post('/', async (req, res) => {
 
   console.log('Matrícula criada com sucesso:', matriculaCriada);
 
-    // Associa a matrícula às turmas usando batch insert
-    if (turmas_ids && turmas_ids.length > 0) {
-      const matriculasTurmasQuery = `
-        INSERT INTO matriculas_turmas (matricula_id, turma_id)
-        VALUES ${turmas_ids.map((_, i) => `($1, $${i + 2})`).join(', ')};
-      `;
-      await client.query(matriculasTurmasQuery, [matriculaCriada.id, ...turmas_ids]);
-    }
+  // Associa a matrícula à turma (única)
+  const matriculasTurmasQuery = `
+    INSERT INTO matriculas_turmas (matricula_id, turma_id)
+    VALUES ($1, $2);
+  `;
+  await client.query(matriculasTurmasQuery, [matriculaCriada.id, turma_id]);
 
-    await client.query('COMMIT'); // Finaliza a transação da criação da matrícula
+  await client.query('COMMIT');
 
-    // Gera as mensalidades após a matrícula ter sido criada
-    if (valorTotalMensalidade && data_vencimento && data_final_contrato) {
-      await gerarMensalidades(
-        matriculaCriada.id,
-        valorTotalMensalidade,  // Passa o valor total das turmas como a mensalidade
-        data_vencimento,
-        data_final_contrato,
-        desconto,
-        bolsista
-      );
-    }
+  // Gera as mensalidades após a matrícula ter sido criada
+  if (mensalidadeFinal && dataVencimentoNormalizada && data_final_contrato) {
+    await gerarMensalidades(
+      matriculaCriada.id,
+      mensalidadeFinal,
+      dataVencimentoNormalizada,
+      data_final_contrato,
+      0,
+      bolsista
+    );
+  }
 
-    res.status(201).json({
-      message: 'Matrícula e mensalidades criadas com sucesso',
-      matricula: matriculaCriada
-    });
+  res.status(201).json({
+    message: 'Matrícula e mensalidades criadas com sucesso',
+    matricula: matriculaCriada
+  });
 
   } catch (error) {
-    await client.query('ROLLBACK'); // Se algo falhar, desfaz a transação
+    await client.query('ROLLBACK');
     console.error('Erro ao criar matrícula:', error);
     res.status(400).json({ error: error.message });
   } finally {
-    client.release(); // Libera o cliente de conexão com o banco de dados
+    client.release();
   }
 });
 
@@ -181,7 +205,7 @@ router.put('/:id', async (req, res) => {
   try {
     const {
       aluno_id,
-      turmas_ids,
+      turma_id,
       data_matricula,
       status,
       mensalidade,
@@ -194,6 +218,11 @@ router.put('/:id', async (req, res) => {
     } = req.body;
 
     await client.query('BEGIN');
+
+    // Normaliza data de vencimento no PUT também
+    const dataVencimentoPUT = (typeof data_vencimento === 'number' || /^(\d{1,2})$/.test(String(data_vencimento)))
+      ? buildVencimentoDateFromDay(data_vencimento, data_matricula)
+      : data_vencimento;
 
     // Atualiza a matrícula
     const matriculaQuery = `
@@ -208,9 +237,9 @@ router.put('/:id', async (req, res) => {
       status,
       mensalidade !== '' ? mensalidade : null,
       valor_matricula !== '' ? valor_matricula : null,
-      data_vencimento,
+      dataVencimentoPUT,
       data_final_contrato,
-      desconto || 0,
+      parseFloat(desconto) || 0,
       isencao_taxa || false,
       bolsista || false,
       req.params.id,
@@ -219,22 +248,13 @@ router.put('/:id', async (req, res) => {
     const matriculaAtualizada = matriculaResult.rows[0];
 
     if (matriculaAtualizada) {
-      // Apagar associações antigas com turmas
+      // Garantir associação única na tabela de junção
       await client.query('DELETE FROM matriculas_turmas WHERE matricula_id = $1;', [req.params.id]);
 
-      // Inserir novas associações em matriculas_turmas apenas se as turmas forem atualizadas
-      if (turmas_ids && turmas_ids.length > 0) {
-        const placeholders = turmas_ids.map((_, index) => `($1, $${index + 2})`).join(', ');
-        const matriculasTurmasQuery = `
-          INSERT INTO matriculas_turmas (matricula_id, turma_id)
-          VALUES ${placeholders};
-        `;
-        
-        const values = [matriculaAtualizada.id, ...turmas_ids];
-        await client.query(matriculasTurmasQuery, values);
+      if (turma_id) {
+        await client.query('INSERT INTO matriculas_turmas (matricula_id, turma_id) VALUES ($1, $2);', [matriculaAtualizada.id, turma_id]);
       }
 
-      // Cancelar as mensalidades se o status da matrícula for "inativa"
       if (status === 'inativa') {
         const cancelarMensalidadesQuery = `
           UPDATE mensalidades
@@ -244,24 +264,18 @@ router.put('/:id', async (req, res) => {
         await client.query(cancelarMensalidadesQuery, [req.params.id]);
       }
 
-      // NÃO criar novas mensalidades em caso de atualizações de turma ou outros detalhes
-      // Isso evita a criação desnecessária de mensalidades ao atualizar dados
-      // Caso deseje adicionar novas mensalidades em outro contexto, deve-se criar uma lógica específica para isso.
-
-      // Finaliza a transação corretamente
       await client.query('COMMIT');
       res.json(matriculaAtualizada);
     } else {
-      // Desfaz a transação em caso de erro
       await client.query('ROLLBACK');
       res.status(404).json({ message: 'Matrícula não encontrada' });
     }
   } catch (error) {
-    await client.query('ROLLBACK'); // Finaliza a transação em caso de erro
+    await client.query('ROLLBACK');
     console.error('Erro ao atualizar matrícula:', error);
     res.status(400).json({ error: error.message });
   } finally {
-    client.release(); // Libera o cliente de conexão
+    client.release();
   }
 });
 

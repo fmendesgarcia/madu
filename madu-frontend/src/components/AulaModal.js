@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Dialog, DialogActions, DialogContent, DialogTitle, Button, Checkbox, List, ListItem, ListItemText, ListItemSecondaryAction, TextField } from '@mui/material';
+import { Dialog, DialogActions, DialogContent, DialogTitle, Button, Checkbox, List, ListItem, ListItemText, ListItemSecondaryAction, TextField, FormControl, InputLabel, Select, MenuItem, Typography } from '@mui/material';
 
 const AulaModal = ({ 
     showEditModal, 
@@ -13,11 +13,15 @@ const AulaModal = ({
     newTime, 
     setNewDate, 
     setNewTime, 
-    aulaId // ID da aula para carregar presença
+    aulaId, // ID da aula para carregar presença
+    status, setStatus,
+    substitutoId, setSubstitutoId,
+    observacoes, setObservacoes,
+    professores,
+    professorNome
 }) => {
   const [presenceList, setPresenceList] = useState([]);
 
-  // Função para buscar a lista de presença da aula
   useEffect(() => {
     if (showPresenceModal && aulaId) {
       api.get(`/presencas/aulas/${aulaId}/presencas`)
@@ -30,7 +34,6 @@ const AulaModal = ({
     }
   }, [showPresenceModal, aulaId]);
 
-  // Função para lidar com a mudança de presença
   const handlePresenceChange = (index) => {
     setPresenceList(prevList => 
       prevList.map((item, i) => 
@@ -39,7 +42,6 @@ const AulaModal = ({
     );
   };
 
-  // Função para salvar a lista de presença
   const savePresenceList = () => {
     const promises = presenceList.map(item => 
       api.post('/presencas', {
@@ -51,7 +53,6 @@ const AulaModal = ({
 
     Promise.all(promises)
       .then(() => {
-        console.log('Lista de presença salva com sucesso!');
         onClosePresenceList();
       })
       .catch(error => console.error('Erro ao salvar presença:', error));
@@ -59,8 +60,7 @@ const AulaModal = ({
 
   return (
     <>
-      {/* Modal de Edição */}
-      <Dialog open={showEditModal} onClose={onClose}>
+      <Dialog open={showEditModal} onClose={onClose} fullWidth>
         <DialogTitle>Editar Aula</DialogTitle>
         <DialogContent>
           <TextField
@@ -85,6 +85,39 @@ const AulaModal = ({
             }}
             style={{ marginBottom: '10px' }}
           />
+
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            Professor titular: <strong>{professorNome || '—'}</strong>
+          </Typography>
+
+          <FormControl fullWidth style={{ marginBottom: '10px' }}>
+            <InputLabel>Status</InputLabel>
+            <Select value={status} label="Status" onChange={(e) => setStatus(e.target.value)}>
+              <MenuItem value="planejada">Planejada</MenuItem>
+              <MenuItem value="realizada">Realizada</MenuItem>
+              <MenuItem value="cancelada">Cancelada</MenuItem>
+              <MenuItem value="reposicao">Reposição</MenuItem>
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth style={{ marginBottom: '10px' }}>
+            <InputLabel>Substituto (opcional)</InputLabel>
+            <Select value={substitutoId || ''} label="Substituto (opcional)" onChange={(e) => setSubstitutoId(e.target.value)}>
+              <MenuItem value=""><em>Nenhum</em></MenuItem>
+              {professores.map((p) => (
+                <MenuItem key={p.id} value={p.id}>{p.nome}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <TextField
+            label="Observações"
+            fullWidth
+            multiline
+            minRows={2}
+            value={observacoes}
+            onChange={(e) => setObservacoes(e.target.value)}
+          />
         </DialogContent>
         <DialogActions style={{ display: 'flex', justifyContent: 'space-between' }}>
           <Button onClick={onClose} color="secondary">
@@ -101,8 +134,7 @@ const AulaModal = ({
         </DialogActions>
       </Dialog>
 
-      {/* Modal de Lista de Presença */}
-      <Dialog open={showPresenceModal} onClose={onClosePresenceList}>
+      <Dialog open={showPresenceModal} onClose={onClosePresenceList} fullWidth>
         <DialogTitle>Lista de Presença</DialogTitle>
         <DialogContent>
           <List>

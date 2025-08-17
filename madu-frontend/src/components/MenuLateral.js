@@ -97,13 +97,24 @@ const MenuLateral = ({ onLogout }) => {
             <ListItem
               button
               component={Link}
+              to="/financeiro?tab=pay"
+              sx={{ pl: 4 }}
+            >
+              <ListItemIcon>
+                <Payments style={{ color: '#ecf0f1' }} />
+              </ListItemIcon>
+              <ListItemText primary="Pagar Professores" sx={{ color: '#ecf0f1' }} />
+            </ListItem>
+            <ListItem
+              button
+              component={Link}
               to="/financeiro/mensalidades"
               sx={{ pl: 4 }}
             >
               <ListItemIcon>
                 <MonetizationOn style={{ color: '#ecf0f1' }} />
               </ListItemIcon>
-              <ListItemText primary="Mensalidades" sx={{ color: '#ecf0f1' }} />
+              <ListItemText primary="Receber de Alunos" sx={{ color: '#ecf0f1' }} />
             </ListItem>
             <ListItem
               button
@@ -133,7 +144,7 @@ const MenuLateral = ({ onLogout }) => {
         {/* Botão de Logout */}
         <ListItem
           button
-          onClick={onLogout} // Chama a função de logout passada pelo App.js
+          onClick={onLogout}
           sx={{
             color: '#ecf0f1',
             "& .MuiListItemIcon-root": { color: '#ecf0f1' },

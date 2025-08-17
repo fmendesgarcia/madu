@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/config'); // Conexão com o banco de dados
 
@@ -57,5 +57,15 @@ router.get('/validate-token', (req, res) => {
   }
 });
 
+// Rota para listar usuários (apenas para debug)
+router.get('/users', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, name, email FROM users');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Erro no servidor.' });
+  }
+});
 
 module.exports = router;

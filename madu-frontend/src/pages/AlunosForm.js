@@ -13,6 +13,7 @@ import { ptBR } from 'date-fns/locale'; // Importa a localização para portugu�
 
 const AlunoForm = () => {
   const [form, setForm] = useState({
+    codigo: '',
     nome: '',
     sexo: '',
     data_nascimento: null,
@@ -26,6 +27,12 @@ const AlunoForm = () => {
     estado: '',
     foto: '',
     contrato: '',
+    // Campos do responsável financeiro
+    responsavel_nome: '',
+    responsavel_cpf: '',
+    responsavel_telefone: '',
+    responsavel_email: '',
+    responsavel_parentesco: '',
   });
 
   const [fotoPreview, setFotoPreview] = useState(null);
@@ -46,6 +53,18 @@ const AlunoForm = () => {
             aluno.data_nascimento = parseISO(aluno.data_nascimento);
           }
   
+          // Se já existem dados de responsável, marcar o checkbox para exibir os campos
+          const hasResponsavel = !!(
+            aluno.responsavel_nome ||
+            aluno.responsavel_cpf ||
+            aluno.responsavel_telefone ||
+            aluno.responsavel_email ||
+            aluno.responsavel_parentesco
+          );
+          if (hasResponsavel) {
+            aluno.responsavel_financeiro = true;
+          }
+
           setForm(aluno);
           setFotoPreview(aluno.foto ? `${api.defaults.baseURL}/${aluno.foto}` : null);
           setContratoLink(aluno.contrato ? `${api.defaults.baseURL}/${aluno.contrato}` : null);
@@ -57,15 +76,28 @@ const AlunoForm = () => {
   const handleFileChange = (e) => {
     setForm({
       ...form,
-      [e.target.name]: e.target.files[0] // Captura o arquivo selecionado
+      [e.target.name]: e.target.files[0]
     });
   };
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm({
-      ...form,
-      [name]: type === 'checkbox' ? checked : value
-    });
+    
+    if (name === 'responsavel_financeiro' && !checked) {
+      setForm({
+        ...form,
+        [name]: checked,
+        responsavel_nome: '',
+        responsavel_cpf: '',
+        responsavel_telefone: '',
+        responsavel_email: '',
+        responsavel_parentesco: '',
+      });
+    } else {
+      setForm({
+        ...form,
+        [name]: type === 'checkbox' ? checked : value
+      });
+    }
   };
   const handleDateChange = (date) => {
     setForm({
@@ -77,11 +109,11 @@ const AlunoForm = () => {
     if (fileType === 'foto') {
       setForm({ ...form, foto: '' });
       setFotoPreview(null);
-      setFotoRemovida(true); // Envia flag de remoção de foto
+      setFotoRemovida(true);
     } else if (fileType === 'contrato') {
       setForm({ ...form, contrato: '' });
       setContratoLink(null);
-      setContratoRemovido(true); // Envia flag de remoção de contrato
+      setContratoRemovido(true);
     }
   };
   
@@ -92,14 +124,12 @@ const AlunoForm = () => {
   
     Object.keys(form).forEach((key) => {
       if (key === 'data_nascimento' && form.data_nascimento) {
-        // Converte a data para o formato yyyy-MM-dd
         formData.append('data_nascimento', format(form.data_nascimento, 'yyyy-MM-dd'));
       } else {
         formData.append(key, form[key]);
       }
     });
   
-    // Adicionar informação sobre remoção de arquivos, se aplicável
     if (fotoRemovida) {
       formData.append('fotoRemovida', 'true');
     }
@@ -108,14 +138,12 @@ const AlunoForm = () => {
     }
   
     if (id) {
-      // Atualizar aluno existente
       api.put(`/alunos/${id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
         .then(() => navigate('/alunos'))
         .catch((error) => console.error('Erro ao atualizar aluno:', error));
     } else {
-      // Adicionar novo aluno
       api.post('/alunos', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
@@ -133,6 +161,7 @@ const AlunoForm = () => {
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: '400px', margin: '0 auto' }}>
       <h2>{id ? 'Editar Aluno' : 'Adicionar Aluno'}</h2>
+      <FormInput label="Código" name="codigo" value={form.codigo || ''} onChange={handleChange} />
       <FormInput label="Nome" name="nome" value={form.nome} onChange={handleChange} required />
       <FormSelect label="Sexo" name="sexo" value={form.sexo} onChange={handleChange} options={sexoOptions} required />
 
@@ -141,8 +170,8 @@ const AlunoForm = () => {
         selected={form.data_nascimento}
         onChange={handleDateChange}
         dateFormat="dd/MM/yyyy"
-        locale={ptBR} // Localização em português
-        customInput={<TextField label="Data de Nascimento" fullWidth required />} // Usa o TextField do MUI para consistência
+        locale={ptBR}
+        customInput={<TextField label="Data de Nascimento" fullWidth required />}
       />
 
       <FormInput label="Telefone" name="telefone" value={form.telefone} onChange={handleChange} required />
@@ -163,19 +192,73 @@ const AlunoForm = () => {
         label="Responsável Financeiro"
       />
 
-      {/* Checkbox para Bolsista */}
-      <FormControlLabel
-        control={
-          <Checkbox
-            name="bolsista"
-            checked={form.bolsista}
-            onChange={handleChange}
+      {/* Campos do Responsável Financeiro - aparecem apenas quando marcado */}
+      {form.responsavel_financeiro && (
+        <Box sx={{ 
+          border: '1px solid #ddd', 
+          borderRadius: 2, 
+          p: 2, 
+          mt: 2, 
+          backgroundColor: '#f9f9f9' 
+        }}>
+          <Typography variant="h6" sx={{ mb: 2, color: '#1976d2' }}>
+            Dados do Responsável Financeiro
+          </Typography>
+          <FormInput 
+            label="Nome do Responsável" 
+            name="responsavel_nome" 
+            value={form.responsavel_nome} 
+            onChange={handleChange} 
+            required 
           />
-        }
+          <FormInput 
+            label="CPF do Responsável" 
+            name="responsavel_cpf" 
+            value={form.responsavel_cpf} 
+            onChange={handleChange} 
+            required 
+          />
+          <FormInput 
+            label="Telefone do Responsável" 
+            name="responsavel_telefone" 
+            value={form.responsavel_telefone} 
+            onChange={handleChange} 
+            required 
+          />
+          <FormInput 
+            label="Email do Responsável" 
+            name="responsavel_email" 
+            value={form.responsavel_email} 
+            onChange={handleChange} 
+            type="email" 
+            required 
+          />
+          <FormSelect 
+            label="Parentesco" 
+            name="responsavel_parentesco" 
+            value={form.responsavel_parentesco} 
+            onChange={handleChange} 
+            options={[
+              { value: 'Pai', label: 'Pai' },
+              { value: 'Mãe', label: 'Mãe' },
+              { value: 'Avô', label: 'Avô' },
+              { value: 'Avó', label: 'Avó' },
+              { value: 'Tio', label: 'Tio' },
+              { value: 'Tia', label: 'Tia' },
+              { value: 'Irmão', label: 'Irmão' },
+              { value: 'Irmã', label: 'Irmã' },
+              { value: 'Outro', label: 'Outro' },
+            ]} 
+            required 
+          />
+        </Box>
+      )}
+
+      <FormControlLabel
+        control={<Checkbox name="bolsista" checked={form.bolsista} onChange={handleChange} />}
         label="Bolsista"
       />
 
-      {/* Exibir preview da foto, se disponível */}
       {fotoPreview && (
         <Box>
           <Typography>Foto Atual:</Typography>
@@ -183,7 +266,6 @@ const AlunoForm = () => {
           <Button onClick={() => handleRemoveFile('foto')} color="error">Remover Foto</Button>
         </Box>
       )}
-      {/* Exibir link do contrato, se disponível */}
       {contratoLink && (
         <Box>
           <Typography>Contrato Atual:</Typography>
@@ -195,8 +277,6 @@ const AlunoForm = () => {
       <TextField type="file" name="foto" onChange={handleFileChange} label="Foto" InputLabelProps={{ shrink: true }} />
       <TextField type="file" name="contrato" onChange={handleFileChange} label="Contrato" InputLabelProps={{ shrink: true }} />
 
-  
-   
       <Button type="submit" variant="contained" color="primary">{id ? 'Atualizar' : 'Adicionar'}</Button>
     </Box>
   );

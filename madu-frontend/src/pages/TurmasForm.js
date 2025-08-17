@@ -27,11 +27,16 @@ const modalidadeOptions = [
   { value: 'Yoga', label: 'Yoga' },
 ];
 
-
-
 const tipoOptions = [
   { value: 'Presencial', label: 'Presencial' },
   { value: 'Online', label: 'Online' },
+];
+
+const nivelOptions = [
+  { value: '', label: 'Selecione' },
+  { value: 'iniciante', label: 'Iniciante' },
+  { value: 'intermediario', label: 'Intermediário' },
+  { value: 'avancado', label: 'Avançado' },
 ];
 
 const TurmaForm = () => {
@@ -119,7 +124,8 @@ const TurmaForm = () => {
       {/* Campo para selecionar o Tipo (Presencial ou Online) */}
       <FormSelect label="Tipo" name="tipo" value={form.tipo} onChange={handleChange} options={tipoOptions} required />
       
-      <FormInput label="Nível" name="nivel" value={form.nivel} onChange={handleChange} />
+      {/* Campo para selecionar o Nível */}
+      <FormSelect label="Nível" name="nivel" value={form.nivel} onChange={handleChange} options={nivelOptions} required />
 
       <FormSelect
         label="Professor"

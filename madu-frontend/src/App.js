@@ -18,6 +18,7 @@ import Pagamentos from './pages/Pagamentos';
 import Dashboard from './pages/Dashboard';
 import GerenciarLancamentos from './pages/Lancamentos';
 import ConfigurarDiasHorarios from './pages/ConfigurarDiasHorarios';
+import Financeiro from './pages/Financeiro';
 import MenuLateral from './components/MenuLateral';
 import { Box, CssBaseline } from '@mui/material';
 import api from './services/api';
@@ -113,6 +114,7 @@ function App() {
           <Route path="/financeiro/mensalidades" element={<PrivateRoute element={<Mensalidades />} />} />
           <Route path="/financeiro/pagamentos" element={<PrivateRoute element={<Pagamentos />} />} />
           <Route path="/financeiro/lancamentos" element={<PrivateRoute element={<GerenciarLancamentos />} />} />
+          <Route path="/financeiro" element={<PrivateRoute element={<Financeiro />} />} />
           <Route
             path="/turmas/:turmaId/configurar-dias-horarios"
             element={<PrivateRoute element={<ConfigurarDiasHorarios />} />}

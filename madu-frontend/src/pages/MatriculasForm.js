@@ -11,7 +11,7 @@ import { ptBR } from 'date-fns/locale';
 const MatriculaForm = () => {
   const [form, setForm] = useState({
     aluno_id: '',
-    turmas_ids: [], // Mudança para array para múltiplas turmas
+    turma_id: '', // única turma
     data_matricula: '',
     status: 'ativa', // Valor padrão ativo
     mensalidade: '',
@@ -47,7 +47,8 @@ const MatriculaForm = () => {
             matricula.data_matricula = new Date(matricula.data_matricula);
           }
           if (matricula.data_vencimento) {
-            matricula.data_vencimento = new Date(matricula.data_vencimento);
+            const dt = new Date(matricula.data_vencimento);
+            matricula.data_vencimento = dt.getDate(); // guarda apenas o dia (1-31)
           }
           if (matricula.data_final_contrato) {
             matricula.data_final_contrato = new Date(matricula.data_final_contrato);
@@ -61,15 +62,17 @@ const MatriculaForm = () => {
             setIsInativoSalvo(true); // Define que o status "inativa" foi salvo anteriormente
           }
 
+          // Obter a turma (primeira) a partir de turmas_nomes
           if (turmasResponse.data && matricula.turmas_nomes) {
-            const turmaIds = turmasResponse.data
-              .filter((turma) => matricula.turmas_nomes.includes(turma.nome))
-              .map((turma) => turma.id);
-
-            matricula.turmas_ids = turmaIds;
+            const nomes = Array.isArray(matricula.turmas_nomes) ? matricula.turmas_nomes : String(matricula.turmas_nomes).split(',');
+            const nomePrimeira = String(nomes[0]).trim();
+            const turmaEncontrada = turmasResponse.data.find((t) => t.nome === nomePrimeira);
+            if (turmaEncontrada) {
+              matricula.turma_id = turmaEncontrada.id;
+            }
           }
 
-          setForm({ ...matricula, turmas_ids: matricula.turmas_ids || [] });
+          setForm({ ...matricula });
         }
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
@@ -88,28 +91,14 @@ const MatriculaForm = () => {
   };
 
   const handleTurmaChange = (event) => {
-    const { value } = event.target;
+    const { value } = event.target; // id da turma
+    const turmaSelecionada = turmas.find((t) => t.id === value || t.id === Number(value));
 
     setForm((prevForm) => ({
       ...prevForm,
-      turmas_ids: typeof value === 'string' ? value.split(',') : value, // Certificar que sempre é um array
+      turma_id: value,
+      mensalidade: turmaSelecionada ? turmaSelecionada.valor_hora : '',
     }));
-
-    // Fetch para buscar os valores das turmas selecionadas e calcular a mensalidade total
-    if (value.length > 0) {
-      api
-        .post('/turmas/valores', { turma_ids: value })
-        .then((response) => {
-          const { valores } = response.data;
-          const totalMensalidade = valores.reduce((acc, val) => acc + val, 0);
-          setForm((prevForm) => ({
-            ...prevForm,
-            mensalidade: totalMensalidade, // Atualiza o campo de mensalidade com o valor total
-          }));
-        });
-    } else {
-      setForm((prevForm) => ({ ...prevForm, mensalidade: 0 }));
-    }
   };
 
   const handleDateChange = (name, date) => { // Agora 'name' é um argumento explícito
@@ -119,14 +108,14 @@ const MatriculaForm = () => {
     }));
   };
 
-
   const handleSubmit = (e) => {
     e.preventDefault();
 
     const formData = {
       ...form,
       data_matricula: form.data_matricula ? form.data_matricula.toISOString().split('T')[0] : '',
-      data_vencimento: form.data_vencimento ? form.data_vencimento.toISOString().split('T')[0] : '',
+      // envia apenas o dia (número)
+      data_vencimento: form.data_vencimento ? Number(form.data_vencimento) : '',
       data_final_contrato: form.data_final_contrato ? form.data_final_contrato.toISOString().split('T')[0] : '',
     };
 
@@ -166,19 +155,15 @@ const MatriculaForm = () => {
 
       {turmas.length > 0 ? (
         <FormControl fullWidth>
-          <InputLabel id="turmas-label">Turmas</InputLabel>
+          <InputLabel id="turma-label">Turma</InputLabel>
           <Select
-            labelId="turmas-label"
-            id="turmas"
-            multiple
-            value={form.turmas_ids}
+            labelId="turma-label"
+            id="turma"
+            value={form.turma_id}
+            name="turma_id"
             onChange={handleTurmaChange}
-            renderValue={(selected) =>
-              selected
-                .map((turmaId) => turmaOptions.find((turma) => turma.value === turmaId)?.label || '')
-                .join(', ')
-            }
             disabled={isInativoSalvo}
+            required
           >
             {turmaOptions.map((turma) => (
               <MenuItem key={turma.value} value={turma.value}>
@@ -226,13 +211,21 @@ const MatriculaForm = () => {
           required
           disabled={parcelasGeradas || isInativoSalvo}
         />
-        <DatePicker
-          selected={form.data_vencimento}
-          onChange={(date) => handleDateChange('data_vencimento', date)}
-          dateFormat="dd/MM/yyyy"
-          locale={ptBR}
-          customInput={<TextField label="Data de Vencimento" fullWidth required disabled={parcelasGeradas || isInativoSalvo} />}
-        />
+        <FormControl fullWidth>
+          <InputLabel id="dia-venc-label">Dia do Vencimento</InputLabel>
+          <Select
+            labelId="dia-venc-label"
+            name="data_vencimento"
+            value={form.data_vencimento || ''}
+            onChange={handleChange}
+            disabled={parcelasGeradas || isInativoSalvo}
+            required
+          >
+            {Array.from({ length: 31 }, (_, i) => i + 1).map((dia) => (
+              <MenuItem key={dia} value={dia}>{dia}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         <DatePicker
           selected={form.data_final_contrato}
           onChange={(date) => handleDateChange('data_final_contrato', date)}
